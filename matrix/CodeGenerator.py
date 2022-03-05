@@ -1,7 +1,11 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
+<<<<<<< HEAD
 # Version: 20220308114331
+=======
+# Version: 20220305170303
+>>>>>>> 5a43078... added a small standard library
 
 from struct import pack, unpack
 
