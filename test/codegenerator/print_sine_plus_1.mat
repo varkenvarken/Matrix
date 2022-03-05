@@ -1,0 +1,6 @@
+extern fun double sin(double p)
+extern fun void printdouble(double d)
+
+double pi2 = 1.570796327
+
+printdouble(sin(pi2)+1)

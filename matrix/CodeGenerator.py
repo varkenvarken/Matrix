@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220304162114
+# Version: 20220305162426
 
 from struct import pack, unpack
 
@@ -36,6 +36,7 @@ def program_postamble():
     return """
 # main postamble
         .globl endmain
+        xor %rax,%rax
 endmain:
         popq    %rbp
         ret

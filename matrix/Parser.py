@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220305103810
+# Version: 20220305152954
 
 from sys import stderr
 
@@ -228,7 +228,7 @@ class MatrixParser(Parser):
     # grouping
     @_('"(" expression ")"')
     def expr(self, p):
-        return p.expr
+        return p.expression
 
     # var reference
     @_("reference")
