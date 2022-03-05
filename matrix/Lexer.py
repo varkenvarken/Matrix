@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220304170907
+# Version: 20220305105607
 
 from re import compile, search
 
@@ -137,9 +137,16 @@ class MatrixLexer(Lexer):
         level = 0
         for lineno, line in enumerate(stream):
             space = leading_space(line)
+
+            # print(f"\nspace{len(space)}:>>>{line}")
+            # print(level)
+            # for l, s in enumerate(indent):
+            #    print(l, f"[{s}]")
+
             if len(space) == 0:
                 while level > 0:
                     level -= 1
+                    indent.pop()
                     tok = Token()
                     tok.type = "DEDENT"
                     tok.value = ""
