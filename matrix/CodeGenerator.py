@@ -1,26 +1,13 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220305162426
+# Version: 20220305170303
 
 from struct import pack, unpack
 
 
 def program_preamble():
     return """
-        .section .rodata
-.pfloat: .asciz "%f\\n"
-        .text
-        .globl printdouble
-        .type printdouble, @function
-printdouble:
-        leaq  .pfloat(%rip), %rdi
-        movl $1,%eax
-        push %rax # ensure %rsp is 16 byte aligned after call
-        call printf
-        pop %rax
-        ret
-        .size   printdouble, .-printdouble
 
 # main preamble
         .text

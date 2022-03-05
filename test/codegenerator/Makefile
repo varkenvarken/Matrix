@@ -2,7 +2,7 @@ PYTHON=python
 MODULE=matrix
 CMD=$(PYTHON) -m $(MODULE)
 GCC=gcc
-LINK_OPTS=-lm
+LINK_OPTS=-lm ../../standardlibrary/matrix_stdlib.so
 
 export PYTHONPATH := ../..
 
@@ -14,6 +14,12 @@ PROGS=$(patsubst %.mat,%.out,$(SOURCES))
 CMPS=$(patsubst %.mat,%.cmp,$(SOURCES))
 
 all: progs
+
+# quote for GNU make docs:
+#.SECONDARY with no prerequisites causes all targets to be treated as secondary
+# (i.e., no target is removed because it is considered intermediate).
+# this way we keep the generate .s files
+.SECONDARY:
 
 # ignore errors so all tests will be run
 # also, make it depend on an empty target so each test will always run regardless
