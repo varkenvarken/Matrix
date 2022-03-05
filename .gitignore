@@ -1,3 +1,5 @@
 matrix/__pycache__/*
 .vscode
 *~
+*.tok
+parser.out
