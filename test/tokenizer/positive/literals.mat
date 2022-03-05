@@ -1,0 +1,9 @@
+// NUMBER
+42
+3.15
+-100
+1.18e-19
+
+// STRINGLITERAL
+"Hello, world!"
+"We come in \"peace\"\n"

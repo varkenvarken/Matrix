@@ -1,0 +1,20 @@
+// types
+void
+long
+double
+str
+mat
+matf
+vec
+vecf
+
+// control etc
+extern
+fun
+if
+else
+for
+while
+break
+return
+continue

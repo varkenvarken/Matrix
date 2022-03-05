@@ -1,0 +1,29 @@
+// indents and dedents
+// vars are only there to make things a bit more readable
+a
+    a
+
+a
+    a
+b
+    b
+
+// the newline at the end should cause two dedents
+a
+    b
+        c
+
+//
+a
+    b
+        c
+    d
+        e
+f
+    g
+
+
+// end of file should still match indents with dedents
+a
+    b
+        c
