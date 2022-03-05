@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220304165316
+# Version: 20220305103810
 
 from sys import stderr
 
@@ -12,8 +12,7 @@ from .Node import ParseNode
 
 
 class MatrixParser(Parser):
-    debugfile = "parser.out"
-
+    # debugfile = "parser.out"
     tokens = MatrixLexer.tokens
 
     precedence = (
