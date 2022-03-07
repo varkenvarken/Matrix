@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220305170303
+# Version: 20220307145453
 
 from struct import pack, unpack
 
@@ -142,7 +142,8 @@ class CodeGenerator:
         self.ast = syntaxtree.tree
         self.symbols = syntaxtree.symbols
         self.code = []
-        self.locals = []
+        self.fdefinitions = []
+        self.locals = []  # bit of a misnomer, static would prob. be better
         self.process(self.ast)
         self.code.extend(self.locals)
         self.code.append(symbol_defs(syntaxtree.symbols))
@@ -161,6 +162,7 @@ class CodeGenerator:
             self.code.append(program_preamble())
             self.process(node.e0)
             self.code.append(program_postamble())
+            self.code.extend(self.fdefinitions)
         elif node.typ == "unit":
             print("begin unit")
             self.code.append(f"# unit (node id: {node.id})")
@@ -173,12 +175,20 @@ class CodeGenerator:
             if node.info == "double":
                 what = node.e0.info
                 name = what[1]
-                if node.e1.typ == "number":  # single constant initializer
-                    self.symbols[name].value = node.e1.info
-                else:  # initializer expression
-                    self.symbols[name].constoverride = True
+                scope = what[0]
+                if scope == "global":
+                    if node.e1.typ == "number":  # single constant initializer
+                        self.symbols[name].value = node.e1.info
+                    else:  # initializer expression
+                        self.symbols[name].constoverride = True
+                        self.process(node.e1)
+                        self.code.append(f"# store in global var {name}")
+                        self.code.append(store_quad(f"{name}(%rip)"))
+                        self.stack -= 8
+                else:
                     self.process(node.e1)
-                    self.code.append(store_quad(f"{name}(%rip)"))
+                    self.code.append(f"# store in local var {name}")
+                    self.code.append(store_quad(f"-{self.scope[name].offset}(%rbp)"))
                     self.stack -= 8
             else:
                 print("unprocessed initializer for", node.info)
@@ -206,20 +216,23 @@ class CodeGenerator:
             self.locals.append(code)
         elif node.typ == "call":
             returntype = node.info["type"]
+            name = node.info["name"]
             an = 0
-            while True:
+            arg = node.e0
+            assert arg.typ == "argument"
+            while arg:
                 self.code.append(f"# argument {an}")
-                arg = node.e0
-                self.process(arg)
+                self.process(arg.e1)
                 # TODO: we need the type of the argument so we know into which register to pass it to the call. we assume double for now
+                arg = arg.e0
+                an += 1
+            an -= 1
+            while an >= 0:
                 self.code.append(pop_double(f"%xmm{an}"))
                 self.stack -= 8
-                if node.e1 is None:
-                    break
-                node = node.e1
-                an += 1
+                an -= 1
             self.adjust_stack()
-            self.code.append(f"        call {node.info['name']}")
+            self.code.append(f"        call {name}")
             if returntype == "double":
                 self.code.append(push_double("%xmm0"))
                 self.stack += 8
@@ -230,16 +243,92 @@ class CodeGenerator:
         elif node.typ == "var reference":
             if node.info["type"] == "double" and node.info["scope"] == "global":
                 name = node.info["name"]
-                self.code.append("# ")
+                self.code.append(f"# global var reference {name}")
                 self.code.append(load_quad(f"{name}(%rip)"))
+                self.stack += 8
+                print(f"stack: {self.stack}")
+            elif node.info["type"] == "double" and node.info["scope"] == "local":
+                name = node.info["name"]
+                self.code.append(f"# local var reference {name}")
+                self.code.append(load_quad(f"-{self.scope[name].offset}(%rbp)"))
                 self.stack += 8
                 print(f"stack: {self.stack}")
             else:
                 print(
                     f'unprocessed var reference {node.info["scope"]} {node.info["type"]} {node.info["name"]}'
                 )
+        elif node.typ == "function definition":
+            self.function = node.info["name"]
+            self.code, self.fdefinitions = self.fdefinitions, self.code
+            self.code.append(
+                f"""
+# fundef {node.info['name']}
+        .text
+        .globl {node.info['name']}
+        .type   {node.info['name']}, @function
+{node.info['name']}:
+        pushq   %rbp         # stack is now 16 byte aligned (because of return address)
+        movq    %rsp, %rbp
+"""
+            )
+            print("]]]]]]]", node)
+            self.scope = node.info["scope"]
+            # reserve space for local vars and move args to stack
+            size = self.processScope()
+            self.code.append(
+                f"""
+        subq ${size},%rsp
+"""
+            )
+            self.moveArgumentsToStack()
+
+            self.process(node.e0)
+
+            self.scope = {}
+            self.code.append(
+                f"""
+end_{node.info['name']}:
+        leave
+        ret
+        .size   {node.info['name']}, .-{node.info['name']}
+"""
+            )
+            self.code, self.fdefinitions = self.fdefinitions, self.code
+        elif node.typ == "return":
+            self.process(node.e0)
+            self.code.append(pop_double(f"%xmm0"))
+            self.stack -= 8
+            self.code.append(f"        jmp end_{self.function}")
         else:
             print("unprocessed syntax node", node)
+
+    def processScope(self):
+        print("]]]]]]]]]]]]]", list(self.scope.items()))
+        size = 0
+        for name, symbol in self.scope.items():
+            if symbol.type == "double":
+                size += 8
+                symbol.offset = size
+                print("@@@@", name, symbol, symbol.offset, size)
+            else:
+                print(f"unprocessed size for local symbol {name} ({symbol.type})")
+        if size % 16:
+            size += 8
+        return size
+
+    def moveArgumentsToStack(self):
+        for name, symbol in self.scope.items():
+            print(">>>>>", name, symbol, symbol.offset)
+            if symbol.type == "double" and symbol.isparameter:
+                reg = f"%xmm{symbol.parameterindex}"
+                self.code.append(
+                    f"""
+# moving argument {symbol.name} ({symbol.type}) to local stack frame
+        movq {reg}, -{symbol.offset}(%rbp)
+"""
+                )
+            elif symbol.isparameter:
+                print(f"unprocessed argument {name} ({symbol.type})")
 
     def print(self, f):
         print("\n".join(self.code), file=f)

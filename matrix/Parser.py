@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220305152954
+# Version: 20220306153915
 
 from sys import stderr
 
@@ -309,7 +309,7 @@ class MatrixParser(Parser):
 
     @_("expression")
     def alist(self, p):
-        return ParseNode("alist", e0=p.expression)
+        return ParseNode("alist", e1=p.expression)
 
     @_('alist "," expression')
     def alist(self, p):
@@ -321,7 +321,7 @@ class MatrixParser(Parser):
         return ParseNode(
             "function definition",
             value=p.NAME,
-            e0=ParseNode("return type", p.rtype),
+            e0=ParseNode("return type", p.rtype.value),
             e1=p.parameters,
             e2=p.suite,
         )

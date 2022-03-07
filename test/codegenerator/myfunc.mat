@@ -1,0 +1,9 @@
+extern fun void printdouble(double d)
+
+double c = 12
+
+fun double myfunc(double a, double b):
+    double c = a + b
+    return c
+
+printdouble(myfunc(10+7,20+5))

@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220304172024
+# Version: 20220307110258
 
 from math import expm1
 
@@ -9,11 +9,16 @@ from .Node import SyntaxNode
 
 
 class Symbol:
-    def __init__(self, name, typ, const=False, rtype=None, parameters=None):
+    def __init__(
+        self, name, typ, const=False, rtype=None, parameters=None, isparameter=False
+    ):
         self.name = name
         self.type = typ
         self.const = const
         self.constoverride = False
+        self.isparameter = isparameter
+        self.parameterindex = -1
+        self.offset = 0
         self.value = None
         self.rtype = rtype
         self.parameters = parameters
@@ -21,8 +26,8 @@ class Symbol:
 
     def __str__(self):
         if self.type != "function":
-            return f"{self.name:12s} {'const' if self.const else 'var  '}:{self.type} = {self.value}"
-        return f"{self.name:12s} fun  :{self.rtype} ({','.join(self.parameters)})"
+            return f"{self.scope:6s} {self.name:12s}{'p' if self.isparameter else ' '}({self.parameterindex:2d}) {'const' if self.const else 'var  '}:{self.type} = {self.value}"
+        return f"{self.scope:6s} {self.name:12s}    fun  :{self.rtype} ({','.join(self.parameters)})"
 
 
 class Scope:
@@ -40,6 +45,7 @@ class Scope:
 
     def __setitem__(self, key, value):
         value.scope = self.scope
+        print("Scope.__setitem__", key, value)
         self.symbols[key] = value
 
     def __contains__(self, key):
@@ -50,7 +56,13 @@ class Scope:
         return False
 
     def __str__(self):
-        return "\n".join(f"{value}" for key, value in self.symbols.items())
+        a = "\n".join(f"{value}" for key, value in self.symbols.items())
+        b = (
+            "\n" + "\n".join(f"{value}" for key, value in self.outer.symbols.items())
+            if self.outer
+            else ""
+        )
+        return a + b
 
 
 class SyntaxTree:
@@ -64,12 +76,21 @@ class SyntaxTree:
             return node
         elif node.token == "program":
             return SyntaxNode("program", "start", e0=self.process(node.e1))
-        elif node.token == "unit":
+        elif node.token in ("unit", "simpleunit"):
             return SyntaxNode(
                 "unit",
                 "",
                 e0=self.process(node.e0),
                 e1=self.process(node.e1),
+                level=node.level + 1,
+            )
+        elif node.token == "suite":
+            return self.process(node.e1)
+        elif node.token == "return":
+            return SyntaxNode(
+                "return",
+                "",
+                e0=self.process(node.e0),
                 level=node.level + 1,
             )
         elif node.token == "vardeclist":
@@ -114,6 +135,7 @@ class SyntaxTree:
                 parameter = plist.e1
                 plist = plist.e0
                 parameters.append(parameter.e0.value)
+            # TODO: warn if redefined (with same signature)
             self.symbols[name] = Symbol(
                 name, "function", True, rtype=node.e0.value, parameters=parameters
             )
@@ -122,25 +144,29 @@ class SyntaxTree:
             if name not in self.symbols:
                 print(f"unknown function {name}")
                 return None
-            else:
+            else:  # arguments are evaluated left to right
                 fun = self.symbols[name]
                 alist = node.e0
-                sn = snret = SyntaxNode("call", {"name": name, "type": fun.rtype})
-                na = 0
-                print(snret, sn)
+                snret = SyntaxNode("call", {"name": name, "type": fun.rtype})
+                print(snret)
+                arglist = []
+                # e1 points to an expresssion
+                # e0 points to any additional arguments to the left
                 while alist is not None:
-                    sn.e0 = self.process(alist.e0)
-                    sn = sn.e0
+                    print("####", alist)
+                    arglist.insert(0, self.process(alist.e1))
+                    # TODO: match type of expr {sn} againts param {fun.parameters[na]}"
+                    alist = alist.e0
+                print(arglist)
+                if len(arglist) != len(fun.parameters):
                     print(
-                        f"TODO: match type of expr {sn} againts param {fun.parameters[na]}"
+                        f"length of argument list {len(arglist)} does not match length of parameter list {len(fun.parameters)}"
                     )
-                    alist = alist.e1
-                    na += 1
-                    print(snret, sn)
-                if na != len(fun.parameters):
-                    print(
-                        f"length of argument list {na} does not match length of parameter list {len(fun.parameters)}"
-                    )
+                sn = snret
+                while arglist:
+                    arg = SyntaxNode("argument", "", e1=arglist.pop(0))
+                    sn.e0 = arg
+                    sn = arg
                 return snret
         elif node.token == "name":
             name = node.value
@@ -152,13 +178,57 @@ class SyntaxTree:
                 "var reference", {"name": name, "scope": var.scope, "type": var.type}
             )
         elif node.token == "function definition":
-            name = node.value
+            fname = node.value
             # check if name already defined
+            if fname in self.symbols:
+                print(f"function {fname} already defined")
+                return None
             # add an entry in the global scope just like a function declaration
+            plist = node.e1
+            parameters = []
+            while plist is not None:
+                parameter = plist.e1
+                plist = plist.e0
+                parameters.append(parameter.e0.value)
+            # TODO: warn if redefined (with same signature)
+            self.symbols[fname] = Symbol(
+                fname, "function", True, rtype=node.e0.value, parameters=parameters
+            )
             # push a new local scope
+            print("scope before\n", self.symbols)
+            self.symbols = Scope(outer=self.symbols)
             # add the parameters to the local scope
+            plist = node.e1
+            parameters = []
+            while plist is not None:
+                parameter = plist.e1
+                plist = plist.e0
+                print(">>>>>", parameter)
+                name = parameter.value
+                typ = parameter.e0.value
+                parameters.append(
+                    Symbol(name, typ, False, isparameter=True)
+                )  # TODO: add option for const modifier to params?
+            for n, p in enumerate(reversed(parameters)):
+                p.parameterindex = n
+                self.symbols[p.name] = p
             # process the body
-            # pop the local scope 
+            body = self.process(node.e2)
+            # pop the local scope
+            print("scope after\n", self.symbols)
+            local = self.symbols.symbols.copy()
+            self.symbols = self.symbols.outer
+            # return to body for code generation
+            return SyntaxNode(
+                "function definition",
+                {
+                    "name": fname,
+                    "scope": local,
+                    "rtype": node.e0.value,
+                    "ptypes": list(reversed(parameters)),
+                },
+                e0=body,
+            )
         else:
             print("unrecognized ParseNode", node)
             return None
