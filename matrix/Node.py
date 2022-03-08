@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220308142136
+# Version: 20220308145355
 
 from sly.yacc import YaccSymbol
 
@@ -44,6 +44,9 @@ class ParseNode:
             self.line = ""
             self.index = 0
 
+    def src(self):
+        return dict(lineno=self.lineno, index=self.index, line=self.line)
+
     def __str__(self):
         lineno = f"@{self.lineno:4d}:{self.index:3d}" if self.lineno else ""
         enmap = ", ".join(
@@ -78,7 +81,9 @@ class SyntaxNode:
         cls._id += 1
         return cls._id
 
-    def __init__(self, typ, info, e0=None, e1=None, e2=None, level=0):
+    def __init__(
+        self, typ, info, e0=None, e1=None, e2=None, level=0, lineno=0, index=0, line=""
+    ):
         self.id = self.generateId()
         self.typ = typ
         self.info = info
@@ -86,8 +91,9 @@ class SyntaxNode:
         self.e1 = e1
         self.e2 = e2
         self.level = level
-        self.lineno = 0
-        self.line = ""
+        self.lineno = lineno
+        self.index = index
+        self.line = line
 
     def __str__(self):
         enmap = ", ".join(
@@ -95,4 +101,10 @@ class SyntaxNode:
             for n, en in enumerate((self.e0, self.e1, self.e2))
             if en
         )
-        return f"({self.typ}:{self.info}) {enmap}"
+        newline = "\n"
+        lineinfo = (
+            ""
+            if self.lineno is None or self.index == 0
+            else f"@|{self.lineno}:{self.index}:{self.line.rstrip(newline)}"
+        )
+        return f"({self.typ}:{self.info}) {enmap} {lineinfo}"

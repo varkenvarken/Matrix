@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220307164338
+# Version: 20220308145601
 
 from math import expm1
 
@@ -24,7 +24,7 @@ class Symbol:
         self.parameters = parameters
         self.scope = None
 
-    def __str__(self):
+    def __repr__(self):
         if self.type != "function":
             return f"{self.scope:6s} {self.name:12s}{'p' if self.isparameter else ' '}({self.parameterindex:2d}) {'const' if self.const else 'var  '}:{self.type} = {self.value}"
         return f"{self.scope:6s} {self.name:12s}    fun  :{self.rtype} ({','.join(self.parameters)})"
@@ -73,7 +73,9 @@ class SyntaxTree:
         if node is None:
             return node
         elif node.token == "program":
-            return SyntaxNode("program", "start", e0=self.process(node.e1))
+            return SyntaxNode(
+                "program", "start", e0=self.process(node.e1), **node.src()
+            )
         elif node.token in ("unit", "simpleunit"):
             return SyntaxNode(
                 "unit",
@@ -81,6 +83,7 @@ class SyntaxTree:
                 e0=self.process(node.e0),
                 e1=self.process(node.e1),
                 level=node.level + 1,
+                **node.src(),
             )
         elif node.token == "suite":
             return self.process(node.e1)
@@ -90,43 +93,65 @@ class SyntaxTree:
                 "",
                 e0=self.process(node.e0),
                 level=node.level + 1,
+                **node.src(),
             )
         elif node.token == "vardeclist":
             const = node.value != "var"
             typ = node.e0.value
             vardecls = node.e1
-            dnodes = dnode = SyntaxNode("initialize", typ)
+            dnodes = dnode = SyntaxNode(
+                "initialize", typ, level=node.level + 1, **node.src()
+            )
             while vardecls:
                 vardecl = vardecls.e0
                 name = vardecl.value
                 # TODO: check if name already defined
-                dnode.e0 = SyntaxNode("assign", (self.symbols.scope, name))
+                dnode.e0 = SyntaxNode(
+                    "assign",
+                    (self.symbols.scope, name),
+                    level=node.level + 1,
+                    **node.src(),
+                )
                 self.symbols[name] = Symbol(name, typ, const)
                 if vardecl.e0 is None:
                     dnode.e1 = (
-                        SyntaxNode("stringliteral", "")
+                        SyntaxNode(
+                            "stringliteral", "", level=node.level + 1, **node.src()
+                        )
                         if type == "stringliteral"
-                        else SyntaxNode("number", 0)
+                        else SyntaxNode("number", 0, level=node.level + 1, **node.src())
                     )
                 else:
                     dnode.e1 = self.process(vardecl.e0)
                 vardecls = vardecls.e1
                 if vardecls is not None:
-                    dnode.e1 = SyntaxNode("initialize", typ)
+                    dnode.e1 = SyntaxNode(
+                        "initialize", typ, level=node.level + 1, **node.src()
+                    )
                     dnode = dnode.e1
             return dnodes
         elif node.token in ("number", "stringliteral"):
-            return SyntaxNode(node.token, node.value)
+            return SyntaxNode(
+                node.token, node.value, level=node.level + 1, **node.src()
+            )
         elif node.token == "plus":
             sn = SyntaxNode(
                 "binop",
                 {"op": "plus"},
                 e0=self.process(node.e0),
                 e1=self.process(node.e1),
+                level=node.level + 1,
+                **node.src(),
             )
             return sn
         elif node.token == "uminus":
-            return SyntaxNode("unop", {"op": "uminus"}, e0=self.process(node.e0))
+            return SyntaxNode(
+                "unop",
+                {"op": "uminus"},
+                e0=self.process(node.e0),
+                level=node.level + 1,
+                **node.src(),
+            )
         elif node.token == "function declaration":
             name = node.value
             plist = node.e1
@@ -147,7 +172,12 @@ class SyntaxTree:
             else:  # arguments are evaluated left to right
                 fun = self.symbols[name]
                 alist = node.e0
-                snret = SyntaxNode("call", {"name": name, "type": fun.rtype})
+                snret = SyntaxNode(
+                    "call",
+                    {"name": name, "type": fun.rtype},
+                    level=node.level + 1,
+                    **node.src(),
+                )
                 arglist = []
                 # e1 points to an expresssion
                 # e0 points to any additional arguments to the left
@@ -161,7 +191,13 @@ class SyntaxTree:
                     )
                 sn = snret
                 while arglist:
-                    arg = SyntaxNode("argument", "", e1=arglist.pop(0))
+                    arg = SyntaxNode(
+                        "argument",
+                        "",
+                        e1=arglist.pop(0),
+                        level=node.level + 1,
+                        **node.src(),
+                    )
                     sn.e0 = arg
                     sn = arg
                 return snret
@@ -172,7 +208,10 @@ class SyntaxTree:
                 return None
             var = self.symbols[name]
             return SyntaxNode(
-                "var reference", {"name": name, "scope": var.scope, "type": var.type}
+                "var reference",
+                {"name": name, "scope": var.scope, "type": var.type},
+                level=node.level + 1,
+                **node.src(),
             )
         elif node.token == "function definition":
             fname = node.value
@@ -222,6 +261,8 @@ class SyntaxTree:
                     "ptypes": list(reversed(parameters)),
                 },
                 e0=body,
+                **node.src(),
+                level=node.level + 1,
             )
         else:
             print("unrecognized ParseNode", node)
@@ -240,5 +281,13 @@ class SyntaxTree:
         print(self.symbols, file=f)
         print(file=f)
         SyntaxTree.walk(
-            self.tree, lambda x: print(f"{x.id:3d}", "  " * x.level, str(x), file=f)
+            self.tree,
+            lambda x: print(
+                f"{x.id:3d}",
+                "  " * x.level,
+                str(x).replace("@|", "\n" + "  " * x.level + "     "),
+                # ("   \n" + "  " * x.level).join(str(x).split("@|")),
+                file=f,
+                sep=" ",
+            ),
         )
