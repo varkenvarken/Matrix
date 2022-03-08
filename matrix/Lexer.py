@@ -1,13 +1,27 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220305105607
+# Version: 20220308131958
 
 from re import compile, search
 
 from sly import Lexer
 from sly.lex import Token
 
+
+class MatrixToken(Token):
+    def __init__(self) -> None:
+        super().__init__()
+        self.line = ""
+
+    @staticmethod
+    def fromToken(tok):
+        token = MatrixToken()
+        token.type = tok.type
+        token.value = tok.value
+        token.lineno = tok.lineno
+        token.index = tok.index
+        return token
 
 class MatrixLexer(Lexer):
     tokens = {
@@ -147,11 +161,12 @@ class MatrixLexer(Lexer):
                 while level > 0:
                     level -= 1
                     indent.pop()
-                    tok = Token()
+                    tok = MatrixToken()
                     tok.type = "DEDENT"
                     tok.value = ""
                     tok.lineno = lineno + 1
                     tok.index = 0
+                    tok.line = line
                     yield tok
                     # tok = Token()
                     # tok.type = "NEWLINE"
@@ -160,7 +175,7 @@ class MatrixLexer(Lexer):
                     # tok.index = 0
                     # yield tok
             elif space != indent[-1]:
-                tok = Token()
+                tok = MatrixToken()
                 tok.value = space
                 tok.lineno = lineno + 1
                 tok.index = 0
@@ -174,24 +189,28 @@ class MatrixLexer(Lexer):
                     indent.pop()
                 else:  # same length but mixed spaces and tabes
                     tok.type = "ERROR"
+                tok.line = line
                 yield tok
             for token in self.tokenize(line, lineno=lineno + 1):
-                lastline = token.lineno
-                yield token
+                tok = MatrixToken.fromToken(token)
+                tok.line = line
+                yield tok
 
         # return any number of missing DEDENT tokens at the end of the stream
         for i in range(level):
-            tok = Token()
+            tok = MatrixToken()
             tok.type = "DEDENT"
             tok.value = ""
             tok.lineno = lineno + 1
             tok.index = 0
+            tok.line = line
             yield tok
 
         # and yield an extra newline
-        tok = Token()
+        tok = MatrixToken()
         tok.type = "NEWLINE"
         tok.value = "\n"
         tok.lineno = lineno + 1
         tok.index = 0
+        tok.line = line
         yield tok
