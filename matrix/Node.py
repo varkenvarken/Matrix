@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220308145355
+# Version: 20220308150155
 
 from sly.yacc import YaccSymbol
 
@@ -95,16 +95,20 @@ class SyntaxNode:
         self.index = index
         self.line = line
 
-    def __str__(self):
-        enmap = ", ".join(
-            f"e{n} -> [{en.id:4d}]"
-            for n, en in enumerate((self.e0, self.e1, self.e2))
-            if en
-        )
+    def src(self):
         newline = "\n"
         lineinfo = (
             ""
             if self.lineno is None or self.index == 0
             else f"@|{self.lineno}:{self.index}:{self.line.rstrip(newline)}"
         )
-        return f"({self.typ}:{self.info}) {enmap} {lineinfo}"
+        return lineinfo
+
+    def __str__(self):
+        enmap = ", ".join(
+            f"e{n} -> [{en.id:4d}]"
+            for n, en in enumerate((self.e0, self.e1, self.e2))
+            if en
+        )
+
+        return f"({self.typ}:{self.info}) {enmap} {self.src()}"
