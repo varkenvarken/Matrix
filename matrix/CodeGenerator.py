@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220307145453
+# Version: 20220308114331
 
 from struct import pack, unpack
 
@@ -28,10 +28,29 @@ endmain:
         popq    %rbp
         ret
         .size   main, .-main
+.DOUBLENEGATE:     # to negate a double with xorpd
+        .long   0
+        .long   -2147483648
+        .long   0
+        .long   0
 """
 
 
 def pop_double(reg):
+    return f"""
+        pop %rax
+        movq %rax, {reg}
+"""
+
+
+def push_quad(reg):
+    return f"""
+        movq {reg}, %rax
+        push %rax
+"""
+
+
+def pop_quad(reg):
     return f"""
         pop %rax
         movq %rax, {reg}
@@ -52,8 +71,24 @@ def load_quad(reg):
 """
 
 
+def load_address(reg):
+    return f"""
+        leaq {reg}, %rax
+        push %rax
+"""
+
+
 def store_quad(reg):
     return f"""
+# store a double
+        pop %rax
+        movq %rax, {reg}
+"""
+
+
+def store_string(reg):
+    return f"""
+# store a (pointer to a) string
         pop %rax
         movq %rax, {reg}
 """
@@ -73,6 +108,24 @@ def local_double_number(number):
         f"""
 {label}:
         .double {number if number is not None else 0.0}
+""",
+    )
+
+
+# TODO: escape any embedded quotes
+local_strings = -1
+
+
+# note that string literals have already quotes arounf them
+def local_string(s):
+    global local_strings
+    local_strings += 1
+    label = f".LS{local_strings}"
+    return (
+        label,
+        f"""
+{label}:
+        .string {s if s is not None else ''}
 """,
     )
 
@@ -97,13 +150,23 @@ def vardef(v):
         lines = [
             f"\n{tab}.global {v.name}",
             f"{tab}{'.section .rodata' if v.const and not v.constoverride else '.data'}",
-            f"{tab}.align 8",
+            f"{tab}.p2align 3",
             f"{tab}.type {v.name}, @object",
             f"{tab}.size {v.name}, 8",
             f"{v.name}:",
             f"{tab}.double {v.value if v.value is not None else 0.0}",
             #            f"{tab}.long {longs[0]:d}",
             #            f"{tab}.long {longs[1]:d}",
+        ]
+    if v.type == "str":
+        lines = [
+            f"\n{tab}.global {v.name}",
+            f"{tab}.section .rodata",
+            f"{tab}.type {v.name}, @object",
+            f"{v.name}:",
+            f"{tab}.quad . + 8",
+            f"{tab}.string {v.value}",
+            f"{tab}.size   {v.name}, .-{v.name}",
         ]
     elif v.type == "function":
         lines = [""]
@@ -172,6 +235,7 @@ class CodeGenerator:
             print("end unit")
             self.process(node.e1)
         elif node.typ == "initialize":
+            # TODO: check that type of expresion matches type of variable being initialized (or actually do this in Syntax.py)
             if node.info == "double":
                 what = node.e0.info
                 name = what[1]
@@ -190,47 +254,120 @@ class CodeGenerator:
                     self.code.append(f"# store in local var {name}")
                     self.code.append(store_quad(f"-{self.scope[name].offset}(%rbp)"))
                     self.stack -= 8
+            elif node.info == "str":
+                what = node.e0.info
+                name = what[1]
+                scope = what[0]
+                if scope == "global":
+                    if node.e1.typ == "stringliteral":  # single constant initializer
+                        self.symbols[name].value = node.e1.info
+                    else:  # initializer expression
+                        self.symbols[name].constoverride = True
+                        self.process(node.e1)
+                        self.code.append(f"# store in global var {name}")
+                        self.code.append(store_string(f"{name}(%rip)"))
+                        self.stack -= 8
+                else:
+                    self.process(node.e1)
+                    self.code.append(f"# store in local var {name}")
+                    self.code.append(store_string(f"-{self.scope[name].offset}(%rbp)"))
+                    self.stack -= 8
             else:
                 print("unprocessed initializer for", node.info)
-        elif node.typ == "binop":
-            self.process(node.e0)
-            self.process(node.e1)
-            self.code.append(pop_double("%xmm0"))
-            self.stack -= 8
-            print(f"stack: {self.stack}")
-            self.code.append(pop_double("%xmm1"))
-            self.stack -= 8
-            print(f"stack: {self.stack}")
-            if node.info["op"] == "plus":
-                self.code.append("        addsd %xmm1, %xmm0")
+        elif node.typ == "unop":
+            type0 = self.process(node.e0)
+            if type0 == "double":
+                self.code.append(
+                    f"""
+        movq (%rsp),%xmm0
+        movq    .DOUBLENEGATE(%rip), %xmm1
+        xorpd   %xmm1, %xmm0
+        movq %xmm0, (%rsp)
+"""
+                )
+                return type0
             else:
-                print("unprocessed binop", node.info["op"])
-            self.code.append(push_double("%xmm0"))
-            self.stack += 8
-            print(f"stack: {self.stack}")
+                print(f"unprocessed unop {node.info['op']} for type {type0}")
+        elif node.typ == "binop":
+            type0 = self.process(node.e0)
+            type1 = self.process(node.e1)
+            if type0 != type1 or type0 is None or type1 is None:
+                print(f"Incompatible type {type0} {type1} in node {node}")
+                return
+            if type0 == "double":
+                self.code.append(pop_double("%xmm0"))
+                self.stack -= 8
+                print(f"stack: {self.stack}")
+                self.code.append(pop_double("%xmm1"))
+                self.stack -= 8
+                print(f"stack: {self.stack}")
+                if node.info["op"] == "plus":
+                    self.code.append("        addsd %xmm1, %xmm0")
+                else:
+                    print("unprocessed binop", node.info["op"])
+                self.code.append(push_double("%xmm0"))
+                self.stack += 8
+                print(f"stack: {self.stack}")
+                return "double"
+            elif type0 == "str":
+                self.code.append(pop_quad("%rsi"))
+                self.stack -= 8
+                print(f"stack: {self.stack}")
+                self.code.append(pop_quad("%rdi"))
+                self.stack -= 8
+                print(f"stack: {self.stack}")
+                if node.info["op"] == "plus":
+                    self.code.append("        call addstring")
+                else:
+                    print("unprocessed binop", node.info["op"])
+                self.code.append(push_quad("%rax"))
+                self.stack += 8
+                print(f"stack: {self.stack}")
+                return "str"
         elif node.typ == "number":
             label, code = local_double_number(node.info)
             self.code.append(load_quad(f"{label}(%rip)"))
             self.stack += 8
             print(f"stack: {self.stack}")
             self.locals.append(code)
+            return "double"
+        elif node.typ == "stringliteral":
+            label, code = local_string(node.info)
+            self.code.append(load_address(f"{label}(%rip)"))
+            self.stack += 8
+            print(f"stack: {self.stack}")
+            self.locals.append(code)
+            return "str"
         elif node.typ == "call":
             returntype = node.info["type"]
             name = node.info["name"]
             an = 0
             arg = node.e0
             assert arg.typ == "argument"
+            argtypes = []
             while arg:
                 self.code.append(f"# argument {an}")
-                self.process(arg.e1)
-                # TODO: we need the type of the argument so we know into which register to pass it to the call. we assume double for now
+                argtypes.append(self.process(arg.e1))
                 arg = arg.e0
                 an += 1
-            an -= 1
-            while an >= 0:
-                self.code.append(pop_double(f"%xmm{an}"))
+            ndoubles = 0
+            nothers = 0
+            argregisters = []
+            regs = ["%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"]
+            for t in argtypes:
+                if t == "double":
+                    argregisters.append(f"%xmm{ndoubles}")
+                    ndoubles += 1
+                else:
+                    argregisters.append(regs.pop(0))
+                    nothers += 1
+            print("!!!!!!!!", argtypes, argregisters, an)
+            for i in range(an):
+                self.code.append(pop_quad(argregisters.pop()))
                 self.stack -= 8
-                an -= 1
+            self.code.append(
+                f"        movq ${an},%rax  # number of arguments, only needed when calling varargs"
+            )
             self.adjust_stack()
             self.code.append(f"        call {name}")
             if returntype == "double":
@@ -238,18 +375,27 @@ class CodeGenerator:
                 self.stack += 8
             elif returntype == "void":
                 self.code.append("# void return type, nothing to push")
+            elif returntype == "str":
+                self.code.append(push_quad("%rax"))
+                self.stack += 8
             else:
                 print(f"return type {returntype} ignored for now")
+            return returntype
         elif node.typ == "var reference":
-            if node.info["type"] == "double" and node.info["scope"] == "global":
+            if (
+                node.info["type"] in ("double", "str")
+                and node.info["scope"] == "global"
+            ):
                 name = node.info["name"]
-                self.code.append(f"# global var reference {name}")
+                self.code.append(f"# global var reference {node.info['type']}:{name}")
                 self.code.append(load_quad(f"{name}(%rip)"))
                 self.stack += 8
                 print(f"stack: {self.stack}")
-            elif node.info["type"] == "double" and node.info["scope"] == "local":
+            elif (
+                node.info["type"] in ("double", "str") and node.info["scope"] == "local"
+            ):
                 name = node.info["name"]
-                self.code.append(f"# local var reference {name}")
+                self.code.append(f"# local var reference {node.info['type']}:{name}")
                 self.code.append(load_quad(f"-{self.scope[name].offset}(%rbp)"))
                 self.stack += 8
                 print(f"stack: {self.stack}")
@@ -257,6 +403,7 @@ class CodeGenerator:
                 print(
                     f'unprocessed var reference {node.info["scope"]} {node.info["type"]} {node.info["name"]}'
                 )
+            return node.info["type"]
         elif node.typ == "function definition":
             self.function = node.info["name"]
             self.code, self.fdefinitions = self.fdefinitions, self.code
@@ -306,7 +453,7 @@ end_{node.info['name']}:
         print("]]]]]]]]]]]]]", list(self.scope.items()))
         size = 0
         for name, symbol in self.scope.items():
-            if symbol.type == "double":
+            if symbol.type in ("double", "str"):
                 size += 8
                 symbol.offset = size
                 print("@@@@", name, symbol, symbol.offset, size)
@@ -317,18 +464,30 @@ end_{node.info['name']}:
         return size
 
     def moveArgumentsToStack(self):
-        for name, symbol in self.scope.items():
-            print(">>>>>", name, symbol, symbol.offset)
-            if symbol.type == "double" and symbol.isparameter:
-                reg = f"%xmm{symbol.parameterindex}"
+        args = [symbol for name, symbol in self.scope.items() if symbol.isparameter]
+        args.sort(key=lambda s: s.parameterindex)
+        xmms = [f"%xmm{i}" for i in range(8)]
+        regs = ["%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"]
+        for symbol in args:
+            print(">>>>>", symbol, symbol.offset)
+            if symbol.type == "double":
+                reg = xmms.pop(0)
                 self.code.append(
                     f"""
-# moving argument {symbol.name} ({symbol.type}) to local stack frame
+# moving double argument {symbol.name} ({symbol.type}) to local stack frame
         movq {reg}, -{symbol.offset}(%rbp)
 """
                 )
-            elif symbol.isparameter:
-                print(f"unprocessed argument {name} ({symbol.type})")
+            elif symbol.type == "str":
+                reg = regs.pop(0)
+                self.code.append(
+                    f"""
+# moving string argument {symbol.name} ({symbol.type}) to local stack frame
+        movq {reg}, -{symbol.offset}(%rbp)
+"""
+                )
+            else:
+                print(f"unprocessed argument {symbol.name} ({symbol.type})")
 
     def print(self, f):
         print("\n".join(self.code), file=f)

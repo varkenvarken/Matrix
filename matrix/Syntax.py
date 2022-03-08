@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220307110258
+# Version: 20220307164338
 
 from math import expm1
 
@@ -45,7 +45,6 @@ class Scope:
 
     def __setitem__(self, key, value):
         value.scope = self.scope
-        print("Scope.__setitem__", key, value)
         self.symbols[key] = value
 
     def __contains__(self, key):
@@ -71,7 +70,6 @@ class SyntaxTree:
         self.tree = self.process(parsetree)
 
     def process(self, node):
-        print(node)
         if node is None:
             return node
         elif node.token == "program":
@@ -117,8 +115,8 @@ class SyntaxTree:
                     dnode.e1 = SyntaxNode("initialize", typ)
                     dnode = dnode.e1
             return dnodes
-        elif node.token == "number":
-            return SyntaxNode("number", node.value)
+        elif node.token in ("number", "stringliteral"):
+            return SyntaxNode(node.token, node.value)
         elif node.token == "plus":
             sn = SyntaxNode(
                 "binop",
@@ -127,6 +125,8 @@ class SyntaxTree:
                 e1=self.process(node.e1),
             )
             return sn
+        elif node.token == "uminus":
+            return SyntaxNode("unop", {"op": "uminus"}, e0=self.process(node.e0))
         elif node.token == "function declaration":
             name = node.value
             plist = node.e1
@@ -148,16 +148,13 @@ class SyntaxTree:
                 fun = self.symbols[name]
                 alist = node.e0
                 snret = SyntaxNode("call", {"name": name, "type": fun.rtype})
-                print(snret)
                 arglist = []
                 # e1 points to an expresssion
                 # e0 points to any additional arguments to the left
                 while alist is not None:
-                    print("####", alist)
                     arglist.insert(0, self.process(alist.e1))
                     # TODO: match type of expr {sn} againts param {fun.parameters[na]}"
                     alist = alist.e0
-                print(arglist)
                 if len(arglist) != len(fun.parameters):
                     print(
                         f"length of argument list {len(arglist)} does not match length of parameter list {len(fun.parameters)}"
@@ -195,7 +192,6 @@ class SyntaxTree:
                 fname, "function", True, rtype=node.e0.value, parameters=parameters
             )
             # push a new local scope
-            print("scope before\n", self.symbols)
             self.symbols = Scope(outer=self.symbols)
             # add the parameters to the local scope
             plist = node.e1
@@ -203,7 +199,6 @@ class SyntaxTree:
             while plist is not None:
                 parameter = plist.e1
                 plist = plist.e0
-                print(">>>>>", parameter)
                 name = parameter.value
                 typ = parameter.e0.value
                 parameters.append(
@@ -215,7 +210,6 @@ class SyntaxTree:
             # process the body
             body = self.process(node.e2)
             # pop the local scope
-            print("scope after\n", self.symbols)
             local = self.symbols.symbols.copy()
             self.symbols = self.symbols.outer
             # return to body for code generation
