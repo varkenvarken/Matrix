@@ -3,3 +3,6 @@ matrix/__pycache__/*
 *~
 *.tok
 parser.out
+standardlibrary/*.o
+standardlibrary/*.s
+standardlibrary/matrix_stdlib.so
