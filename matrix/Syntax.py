@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220308145601
+# Version: 20220309135452
 
 from math import expm1
 
@@ -252,7 +252,7 @@ class SyntaxTree:
             local = self.symbols.symbols.copy()
             self.symbols = self.symbols.outer
             # return to body for code generation
-            return SyntaxNode(
+            sn = SyntaxNode(
                 "function definition",
                 {
                     "name": fname,
@@ -261,9 +261,10 @@ class SyntaxTree:
                     "ptypes": list(reversed(parameters)),
                 },
                 e0=body,
-                **node.src(),
                 level=node.level + 1,
+                **node.src(),
             )
+            return sn
         else:
             print("unrecognized ParseNode", node)
             return None

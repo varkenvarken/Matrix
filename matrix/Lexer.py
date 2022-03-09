@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220308131958
+# Version: 20220309144220
 
 from re import compile, search
 
@@ -13,6 +13,7 @@ class MatrixToken(Token):
     def __init__(self) -> None:
         super().__init__()
         self.line = ""
+        self.filename = ""
 
     @staticmethod
     def fromToken(tok):
@@ -22,6 +23,12 @@ class MatrixToken(Token):
         token.lineno = tok.lineno
         token.index = tok.index
         return token
+
+    def __str__(self):
+        return (
+            f"{token.type} {token.value} {token.filename}:{token.lineno}:{token.index}"
+        )
+
 
 class MatrixLexer(Lexer):
     tokens = {
@@ -147,15 +154,18 @@ class MatrixLexer(Lexer):
                 return s[: m.start()]
             return ""
 
+        filename = "<unknown>"
         indent = [""]
         level = 0
         for lineno, line in enumerate(stream):
             space = leading_space(line)
-
-            # print(f"\nspace{len(space)}:>>>{line}")
-            # print(level)
-            # for l, s in enumerate(indent):
-            #    print(l, f"[{s}]")
+            lineno -= 1
+            try:
+                filename = stream.filename()
+                lineno = stream.filelineno()
+            except AttributeError as e:
+                print(e)
+                pass
 
             if len(space) == 0:
                 while level > 0:
@@ -164,20 +174,15 @@ class MatrixLexer(Lexer):
                     tok = MatrixToken()
                     tok.type = "DEDENT"
                     tok.value = ""
-                    tok.lineno = lineno + 1
+                    tok.lineno = lineno
                     tok.index = 0
                     tok.line = line
+                    tok.filename = filename
                     yield tok
-                    # tok = Token()
-                    # tok.type = "NEWLINE"
-                    # tok.value = "\n"
-                    # tok.lineno = lineno + 1
-                    # tok.index = 0
-                    # yield tok
             elif space != indent[-1]:
                 tok = MatrixToken()
                 tok.value = space
-                tok.lineno = lineno + 1
+                tok.lineno = lineno
                 tok.index = 0
                 if len(space) > len(indent[-1]):
                     tok.type = "INDENT"
@@ -190,10 +195,12 @@ class MatrixLexer(Lexer):
                 else:  # same length but mixed spaces and tabes
                     tok.type = "ERROR"
                 tok.line = line
+                tok.filename = filename
                 yield tok
-            for token in self.tokenize(line, lineno=lineno + 1):
+            for token in self.tokenize(line, lineno=lineno):
                 tok = MatrixToken.fromToken(token)
                 tok.line = line
+                tok.filename = filename
                 yield tok
 
         # return any number of missing DEDENT tokens at the end of the stream
@@ -201,16 +208,18 @@ class MatrixLexer(Lexer):
             tok = MatrixToken()
             tok.type = "DEDENT"
             tok.value = ""
-            tok.lineno = lineno + 1
+            tok.lineno = lineno
             tok.index = 0
             tok.line = line
+            tok.filename = filename
             yield tok
 
         # and yield an extra newline
         tok = MatrixToken()
         tok.type = "NEWLINE"
         tok.value = "\n"
-        tok.lineno = lineno + 1
+        tok.lineno = lineno
         tok.index = 0
         tok.line = line
+        tok.filename = filename
         yield tok

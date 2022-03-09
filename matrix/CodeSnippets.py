@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220309133451
+# Version: 20220309144812
 
 from argparse import ArgumentError
 from cProfile import label
@@ -346,3 +346,13 @@ def vardef(v):
     elif v.type == "function":
         return None
     return code
+
+def fileref(filenumber, filename):
+    return CodeChunk(lines=[
+        CodeLine(opcode=".file", operands=f'{filenumber} "{filename}"')
+    ])
+
+def location(filenumber, lineno, index):
+    return CodeChunk(lines=[
+        CodeLine(opcode=".loc", operands=f'{filenumber} {lineno} {index}')
+    ])

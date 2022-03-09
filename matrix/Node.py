@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220308150155
+# Version: 20220309143608
 
 from sly.yacc import YaccSymbol
 
@@ -16,14 +16,14 @@ class ParseNode:
         return cls._id
 
     @staticmethod
-    def getLine(production):
+    def getProdAttr(production, attr, default=None):
         for tok in production._slice:
             if isinstance(tok, YaccSymbol):
                 continue
-            line = getattr(tok, "line", None)
+            line = getattr(tok, attr, None)
             if line:
                 return line
-        return ""
+        return default
 
     def __init__(
         self, token, value=None, e0=None, e1=None, e2=None, level=0, prod=None
@@ -36,16 +36,20 @@ class ParseNode:
         self.e2 = e2
         self.level = level
         if prod:
-            self.lineno = getattr(prod, "lineno", None)
-            self.line = ParseNode.getLine(prod)
-            self.index = getattr(prod, "index", 0)
+            self.filename = ParseNode.getProdAttr(prod, "filename", None)
+            self.lineno = ParseNode.getProdAttr(prod, "lineno", None)
+            self.line = ParseNode.getProdAttr(prod, "line", "")
+            self.index = ParseNode.getProdAttr(prod, "index", 0)
         else:
+            self.filename = None
             self.lineno = None
             self.line = ""
             self.index = 0
 
     def src(self):
-        return dict(lineno=self.lineno, index=self.index, line=self.line)
+        return dict(
+            filename=self.filename, lineno=self.lineno, index=self.index, line=self.line
+        )
 
     def __str__(self):
         lineno = f"@{self.lineno:4d}:{self.index:3d}" if self.lineno else ""
@@ -55,9 +59,7 @@ class ParseNode:
             if en
         )
         line = self.line.rstrip("\n")
-        return (
-            f"({self.token}:{self.value if self.value else ''}) {enmap} {lineno}:{line}"
-        )
+        return f"({self.filename}{self.token}:{self.value if self.value else ''}) {enmap} {lineno}:{line}"
 
     def walk(self, level=0):
         self.level = level
@@ -82,7 +84,17 @@ class SyntaxNode:
         return cls._id
 
     def __init__(
-        self, typ, info, e0=None, e1=None, e2=None, level=0, lineno=0, index=0, line=""
+        self,
+        typ,
+        info,
+        e0=None,
+        e1=None,
+        e2=None,
+        level=0,
+        filename="",
+        lineno=0,
+        index=0,
+        line="",
     ):
         self.id = self.generateId()
         self.typ = typ
@@ -91,6 +103,7 @@ class SyntaxNode:
         self.e1 = e1
         self.e2 = e2
         self.level = level
+        self.filename = filename
         self.lineno = lineno
         self.index = index
         self.line = line
@@ -99,7 +112,7 @@ class SyntaxNode:
         newline = "\n"
         lineinfo = (
             ""
-            if self.lineno is None or self.index == 0
+            if self.lineno is None
             else f"@|{self.lineno}:{self.index}:{self.line.rstrip(newline)}"
         )
         return lineinfo

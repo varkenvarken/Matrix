@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220309133104
+# Version: 20220309144832
 
 from .CodeSnippets import *
 
@@ -42,11 +42,13 @@ class CodeGenerator:
         self.code = []
         self.fdefinitions = []
         self.locals = []  # bit of a misnomer, static would prob. be better
+        self.stack = 0
+        self.filename = None
+        self.filenumber = 0
         self.process(self.ast)
         self.code.append("# local constants defined in .text section")
         self.code.extend(self.locals)
         self.code.append(symbol_defs(syntaxtree.symbols))
-        self.stack = 0
 
     def adjust_stack(self):
         if self.stack != 0:
@@ -56,19 +58,22 @@ class CodeGenerator:
     def process(self, node):
         if node is None:
             return
-        elif node.typ == "program":
+        if node.filename is not None:
+            if node.filename != self.filename:
+                self.filename = node.filename
+                self.filenumber += 1
+                self.code.append(fileref(self.filenumber, self.filename))
+            self.code.append(location(self.filenumber, node.lineno, node.index))
+        if node.typ == "program":
             self.code.append(program_preamble())
             self.process(node.e0)
             self.code.append(program_postamble())
             self.code.append(convenience_constants())
             self.code.extend(self.fdefinitions)
         elif node.typ == "unit":
-            print("begin unit")
-            self.code.append(f"# unit (node id: {node.id})")
             self.stack = 0
             self.process(node.e0)
             self.adjust_stack()
-            print("end unit")
             self.process(node.e1)
         elif node.typ == "initialize":
             # TODO: check that type of expresion matches type of variable being initialized (or actually do this in Syntax.py)
@@ -201,6 +206,8 @@ class CodeGenerator:
             self.code.append(function_call(name, returntype, an))
             if returntype in ("double", "str"):
                 self.stack += 8
+            elif returntype == "void":
+                pass
             else:
                 print(f"return type {returntype} ignored for now")
             return returntype
