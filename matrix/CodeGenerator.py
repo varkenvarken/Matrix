@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220309144832
+# Version: 20220310132332
 
 from .CodeSnippets import *
 
@@ -129,6 +129,19 @@ class CodeGenerator:
                         )
                     )
                     self.stack -= 8
+            elif node.info == "mat":
+                what = node.e0.info
+                name = what[1]
+                scope = what[0]
+                if scope == "global":
+                    if node.e1.typ == "matrixliteral":
+                        litname, chunk = globalMatInit(self.symbols[name],node.e1.info)
+                        self.locals.append(chunk)
+                        self.code.append(matCopy(litname,name))
+                    else:  # initializer expression
+                        print(f"unprocessed {scope} initializer expression for", node.info)
+                else:
+                    print(f"unprocessed {scope} initializer for", node.info)
             else:
                 print("unprocessed initializer for", node.info)
         elif node.typ == "unop":

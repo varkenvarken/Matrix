@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220308141927
+# Version: 20220310105744
 
 from operator import index
 from sys import stderr
@@ -147,6 +147,15 @@ class MatrixParser(Parser):
             "vardecl",
             p.NAME,
             e0=p.expr,
+            prod=p,
+        )
+
+    @_("NAME LBRACKET elist RBRACKET")
+    def vardecl(self, p):
+        return ParseNode(
+            "vardecl",
+            p.NAME,
+            e1=p.elist,
             prod=p,
         )
 

@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220309143608
+# Version: 20220309150048
 
 from sly.yacc import YaccSymbol
 
@@ -59,7 +59,9 @@ class ParseNode:
             if en
         )
         line = self.line.rstrip("\n")
-        return f"({self.filename}{self.token}:{self.value if self.value else ''}) {enmap} {lineno}:{line}"
+        return (
+            f"({self.token}:{self.value if self.value else ''}) {enmap} {lineno}:{line}"
+        )
 
     def walk(self, level=0):
         self.level = level

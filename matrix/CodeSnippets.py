@@ -1,14 +1,12 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220309144812
+# Version: 20220310135552
 
+import code
 from argparse import ArgumentError
-from cProfile import label
 from dataclasses import dataclass
-from xml.etree.ElementTree import Comment
-
-import opcode
+from functools import reduce
 
 
 @dataclass
@@ -306,7 +304,26 @@ def store_argument(reg, offset, name, type):
     )
 
 
+rawdata = -1
+
+
+def getDataLabel():
+    global rawdata
+    rawdata += 1
+    return f".LRData{rawdata}"
+
+
+descriptor = -1
+
+
+def getDescriptor():
+    global descriptor
+    descriptor += 1
+    return f".LMatDesc{descriptor}"
+
+
 def vardef(v):
+
     if v.type == "double":
         code = CodeChunk(
             lines=[
@@ -325,7 +342,7 @@ def vardef(v):
                 ),
             ]
         )
-    if v.type == "str":
+    elif v.type == "str":
         code = CodeChunk(
             lines=[
                 CodeLine(opcode=f".global {v.name}"),
@@ -345,14 +362,152 @@ def vardef(v):
         )
     elif v.type == "function":
         return None
+    elif v.type == "mat":
+        data = getDataLabel()
+        desc = getDescriptor()
+        code = CodeChunk(
+            lines=[
+                CodeLine(opcode=f".global {v.name}"),
+                CodeLine(
+                    opcode=".section",
+                    operands=".rodata" if v.const and not v.constoverride else ".data",
+                ),
+                CodeLine(opcode=".p2align 3"),
+                CodeLine(opcode=".type", operands=f"{v.name}, @object"),
+                CodeLine(opcode=".size", operands=f"{v.name}, 8"),
+                CodeLine(label=v.name),
+                CodeLine(
+                    opcode=".quad",
+                    operands=desc,
+                    comment="mat variables and constants are pointers to a data descriptor",
+                ),
+                CodeLine(
+                    label=desc,
+                    opcode=".quad",
+                    operands=f"{len(v.shape)}",
+                    comment="number of dimensions",
+                ),
+                CodeLine(
+                    opcode=".quad", operands="8", comment="size of single data element"
+                ),
+                CodeLine(
+                    opcode=".quad",
+                    operands=data,  # TODO: add null pointer for unspecified shape
+                    comment="pointer to consequetive data. if a shape was specified or an initialize present, data will follow",
+                ),
+                CodeLine(
+                    opcode=".quad",
+                    operands=f"{', '.join(map(str,map(int,v.shape)))}",
+                    comment="shape",
+                ),
+                CodeLine(
+                    label=data,
+                    opcode=".dcb.d",
+                    operands=f"{reduce(lambda x, y: int(x) * int(y), v.shape, 1)} ,0.0",
+                ),
+            ]
+        )
+        # TODO: unspecified shapes should not have default data
+        # for _ in range(reduce(lambda x, y: int(x) * int(y), v.shape, 1)):
+        #    code.lines.append(CodeLine(opcode=".double", operands="0.0"))
+    else:
+        print(f"unprocessed vardef {v.name}:{v.type}")
+        return None
     return code
 
+
+def flatten(
+    nestedList,
+):  # from https://wiki.python.org/moin/ProblemSets/99%20Prolog%20Problems%20Solutions#Problem_7:_Flatten_a_nested_list_structure
+    result = []
+    if not nestedList:
+        return result
+    stack = [list(nestedList)]
+    while stack:
+        current = stack.pop()
+        next = current.pop()
+        if current:
+            stack.append(current)
+        if isinstance(next, list):
+            if next:
+                stack.append(list(next))
+        else:
+            result.append(next)
+    result.reverse()
+    return result
+
+
+matliterals = -1
+
+
+def matLiteral(shape, values):
+    global matliterals
+    matliterals += 1
+    name = f".MATLIT{matliterals}"
+    data = getDataLabel()
+    desc = getDescriptor()
+    code = CodeChunk(
+        lines=[
+            CodeLine(
+                opcode=".section",
+                operands=".data",
+            ),
+            CodeLine(opcode=".p2align 3"),
+            CodeLine(label=name),
+            CodeLine(
+                opcode=".quad",
+                operands=desc,
+                comment="mat variables and constants are pointers to a data descriptor",
+            ),
+            CodeLine(
+                label=desc,
+                opcode=".quad",
+                operands=f"{len(shape)}",
+                comment="number of dimensions",
+            ),
+            CodeLine(
+                opcode=".quad", operands="8", comment="size of single data element"
+            ),
+            CodeLine(
+                opcode=".quad",
+                operands=data,
+                comment="pointer to consequetive data",
+            ),
+            CodeLine(
+                opcode=".quad",
+                operands=f"{', '.join(map(str,map(int,shape)))}",
+                comment="shape",
+            ),
+        ]
+    )
+    code.lines.append(CodeLine(label=data))
+    for val in flatten(values):
+        code.lines.append(CodeLine(opcode=".double", operands=f"{val}"))
+    return name, code
+
+
+def matCopy(src, dst):
+    return CodeChunk(
+        intro=f"copy matrix {src} to {dst}",
+        lines=[
+            CodeLine(opcode="leaq", operands=f"{src}(%rip), %rdi"),
+            CodeLine(opcode="leaq", operands=f"{dst}(%rip), %rsi"),
+            CodeLine(opcode="call", operands="matrixcopy"),
+        ],
+    )
+
+
+def globalMatInit(symbol, info):
+    return matLiteral(info["shape"], info["values"])
+
+
 def fileref(filenumber, filename):
-    return CodeChunk(lines=[
-        CodeLine(opcode=".file", operands=f'{filenumber} "{filename}"')
-    ])
+    return CodeChunk(
+        lines=[CodeLine(opcode=".file", operands=f'{filenumber} "{filename}"')]
+    )
+
 
 def location(filenumber, lineno, index):
-    return CodeChunk(lines=[
-        CodeLine(opcode=".loc", operands=f'{filenumber} {lineno} {index}')
-    ])
+    return CodeChunk(
+        lines=[CodeLine(opcode=".loc", operands=f"{filenumber} {lineno} {index}")]
+    )

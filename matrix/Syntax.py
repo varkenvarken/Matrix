@@ -1,8 +1,9 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220309135452
+# Version: 20220310113808
 
+from ast import While
 from math import expm1
 
 from .Node import SyntaxNode
@@ -23,10 +24,11 @@ class Symbol:
         self.rtype = rtype
         self.parameters = parameters
         self.scope = None
+        self.shape = 0  # a scalar
 
     def __repr__(self):
         if self.type != "function":
-            return f"{self.scope:6s} {self.name:12s}{'p' if self.isparameter else ' '}({self.parameterindex:2d}) {'const' if self.const else 'var  '}:{self.type} = {self.value}"
+            return f"{self.scope:6s} {self.name:12s}{'p' if self.isparameter else ' '}({self.parameterindex:2d}) {'const' if self.const else 'var  '}:{self.type} {self.shape if self.type == 'mat' else ''} = {self.value}"
         return f"{self.scope:6s} {self.name:12s}    fun  :{self.rtype} ({','.join(self.parameters)})"
 
 
@@ -62,6 +64,55 @@ class Scope:
             else ""
         )
         return a + b
+
+
+def inner(node):
+    assert node.token == "elist"
+    assert node.e0.token == "number"
+    values = [node.e0.value]
+    while node.e1:
+        node = node.e1
+        assert node.e0.token == "number"
+        values.append(node.e0.value)
+    return values
+
+
+def elist(node):
+    items = list()
+    assert node.token == "elist"
+    if node.e0.token == "matrixliteral":
+        items.append(elist(node.e0.e0))
+        while node.e1:
+            node = node.e1
+            assert node.e0.token == "matrixliteral"
+            items.append(elist(node.e0.e0))
+            # print(">>", items)
+
+    elif node.e0.token == "number":
+        newitems = inner(node)
+        return newitems
+    else:
+        assert False
+    return items
+
+
+def shape(mat):
+    if type(mat) == list:
+        shape0 = shape(mat[0])
+        for item in mat[1:]:
+            assert shape0 == shape(item)
+        return [len(mat)] + shape0
+    return []
+
+
+def getShape(node):
+    shape = []
+    assert node.token == "elist"
+    assert node.e0.token == "number"
+    while node is not None:
+        shape.append(node.e0.value)
+        node = node.e1
+    return shape
 
 
 class SyntaxTree:
@@ -118,11 +169,17 @@ class SyntaxTree:
                         SyntaxNode(
                             "stringliteral", "", level=node.level + 1, **node.src()
                         )
-                        if type == "stringliteral"
-                        else SyntaxNode("number", 0, level=node.level + 1, **node.src())
+                        if typ == "stringliteral"
+                        else SyntaxNode(
+                            "number", 0, level=node.level + 1, **node.src()
+                        )  # also added for an empty mat a[3,4] for example
                     )
                 else:
                     dnode.e1 = self.process(vardecl.e0)
+                    if type(dnode.e1.info) == dict and "shape" in dnode.e1.info:
+                        self.symbols[name].shape = dnode.e1.info["shape"]
+                if vardecl.e1 is not None:  # a matrix size spec
+                    self.symbols[name].shape = getShape(vardecl.e1)
                 vardecls = vardecls.e1
                 if vardecls is not None:
                     dnode.e1 = SyntaxNode(
@@ -133,6 +190,16 @@ class SyntaxTree:
         elif node.token in ("number", "stringliteral"):
             return SyntaxNode(
                 node.token, node.value, level=node.level + 1, **node.src()
+            )
+        elif node.token in ("matrixliteral"):
+            item = node.e0
+            assert item.token == "elist"
+            mat = elist(item)
+            return SyntaxNode(
+                node.token,
+                {"values": mat, "shape": shape(mat)},
+                level=node.level + 1,
+                **node.src(),
             )
         elif node.token == "plus":
             sn = SyntaxNode(
