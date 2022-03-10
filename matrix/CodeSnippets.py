@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220310135552
+# Version: 20220310143217
 
 import code
 from argparse import ArgumentError
@@ -194,6 +194,18 @@ def binop_str(binop, intro=None, linecomment=None):
     return pop0 + pop1 + binop + push
 
 
+def binop_mat(binop, intro=None, linecomment=None):
+    pop0 = pop_quad(reg="%rsi", intro=intro)
+    pop1 = pop_quad(reg="%rdi")
+    binop = CodeChunk(
+        lines=[
+            CodeLine(opcode="call", operands=f"{binop}", comment=linecomment),
+        ],
+    )
+    push = push_quad(reg="%rax")
+    return pop0 + pop1 + binop + push
+
+
 local_doubles = -1
 
 
@@ -365,51 +377,98 @@ def vardef(v):
     elif v.type == "mat":
         data = getDataLabel()
         desc = getDescriptor()
-        code = CodeChunk(
-            lines=[
-                CodeLine(opcode=f".global {v.name}"),
-                CodeLine(
-                    opcode=".section",
-                    operands=".rodata" if v.const and not v.constoverride else ".data",
-                ),
-                CodeLine(opcode=".p2align 3"),
-                CodeLine(opcode=".type", operands=f"{v.name}, @object"),
-                CodeLine(opcode=".size", operands=f"{v.name}, 8"),
-                CodeLine(label=v.name),
-                CodeLine(
-                    opcode=".quad",
-                    operands=desc,
-                    comment="mat variables and constants are pointers to a data descriptor",
-                ),
-                CodeLine(
-                    label=desc,
-                    opcode=".quad",
-                    operands=f"{len(v.shape)}",
-                    comment="number of dimensions",
-                ),
-                CodeLine(
-                    opcode=".quad", operands="8", comment="size of single data element"
-                ),
-                CodeLine(
-                    opcode=".quad",
-                    operands=data,  # TODO: add null pointer for unspecified shape
-                    comment="pointer to consequetive data. if a shape was specified or an initialize present, data will follow",
-                ),
-                CodeLine(
-                    opcode=".quad",
-                    operands=f"{', '.join(map(str,map(int,v.shape)))}",
-                    comment="shape",
-                ),
-                CodeLine(
-                    label=data,
-                    opcode=".dcb.d",
-                    operands=f"{reduce(lambda x, y: int(x) * int(y), v.shape, 1)} ,0.0",
-                ),
-            ]
-        )
-        # TODO: unspecified shapes should not have default data
-        # for _ in range(reduce(lambda x, y: int(x) * int(y), v.shape, 1)):
-        #    code.lines.append(CodeLine(opcode=".double", operands="0.0"))
+        if type(v.shape) == int:
+            assert v.shape == 0
+            code = CodeChunk(
+                intro=f"global var {v.name} is a scalar (i.e not yet initialized or given a shape)",
+                lines=[
+                    CodeLine(opcode=f".global {v.name}"),
+                    CodeLine(
+                        opcode=".section",
+                        operands=".rodata"
+                        if v.const and not v.constoverride
+                        else ".data",
+                    ),
+                    CodeLine(opcode=".p2align 3"),
+                    CodeLine(opcode=".type", operands=f"{v.name}, @object"),
+                    CodeLine(opcode=".size", operands=f"{v.name}, 8"),
+                    CodeLine(label=v.name),
+                    CodeLine(
+                        opcode=".quad",
+                        operands=desc,
+                        comment="mat variables and constants are pointers to a data descriptor",
+                    ),
+                    CodeLine(
+                        label=desc,
+                        opcode=".quad",
+                        operands=f"0",
+                        comment="number of dimensions (zero, because not initialized)",
+                    ),
+                    CodeLine(
+                        opcode=".quad",
+                        operands="8",
+                        comment="size of single data element",
+                    ),
+                    CodeLine(
+                        opcode=".quad",
+                        operands="0",
+                        comment="pointer to consequetive data (zero, because not initialized)",
+                    ),
+                    CodeLine(
+                        opcode=".quad",
+                        operands=f"0",
+                        comment="shape (a single, 0 dimension, because not initialized)",
+                    ),
+                ],
+            )
+        else:
+            code = CodeChunk(
+                intro=f"global var {v.name} is not a scalar",
+                lines=[
+                    CodeLine(opcode=f".global {v.name}"),
+                    CodeLine(
+                        opcode=".section",
+                        operands=".rodata"
+                        if v.const and not v.constoverride
+                        else ".data",
+                    ),
+                    CodeLine(opcode=".p2align 3"),
+                    CodeLine(opcode=".type", operands=f"{v.name}, @object"),
+                    CodeLine(opcode=".size", operands=f"{v.name}, 8"),
+                    CodeLine(label=v.name),
+                    CodeLine(
+                        opcode=".quad",
+                        operands=desc,
+                        comment="mat variables and constants are pointers to a data descriptor",
+                    ),
+                    CodeLine(
+                        label=desc,
+                        opcode=".quad",
+                        operands=f"{len(v.shape)}",
+                        comment="number of dimensions",
+                    ),
+                    CodeLine(
+                        opcode=".quad",
+                        operands="8",
+                        comment="size of single data element",
+                    ),
+                    CodeLine(
+                        opcode=".quad",
+                        operands=data,  # TODO: add null pointer for unspecified shape
+                        comment="pointer to consequetive data. if a shape was specified or an initialize present, data will follow",
+                    ),
+                    CodeLine(
+                        opcode=".quad",
+                        operands=f"{', '.join(map(str,map(int,v.shape)))}",
+                        comment="shape",
+                    ),
+                    CodeLine(
+                        label=data,
+                        opcode=".dcb.d",
+                        operands=f"{reduce(lambda x, y: int(x) * int(y), v.shape, 1)} ,0.0",
+                    ),
+                ],
+            )
     else:
         print(f"unprocessed vardef {v.name}:{v.type}")
         return None

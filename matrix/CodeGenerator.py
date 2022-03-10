@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220310132332
+# Version: 20220310171255
 
 from .CodeSnippets import *
 
@@ -135,13 +135,28 @@ class CodeGenerator:
                 scope = what[0]
                 if scope == "global":
                     if node.e1.typ == "matrixliteral":
-                        litname, chunk = globalMatInit(self.symbols[name],node.e1.info)
+                        litname, chunk = globalMatInit(self.symbols[name], node.e1.info)
                         self.locals.append(chunk)
-                        self.code.append(matCopy(litname,name))
+                        self.code.append(matCopy(litname, name))
                     else:  # initializer expression
-                        print(f"unprocessed {scope} initializer expression for", node.info)
+                        self.symbols[name].constoverride = True
+                        self.process(node.e1)
+                        self.code.append(
+                            store_quad(
+                                reg=f"{name}(%rip)",
+                                intro="store in global var {name}",
+                            )
+                        )
+                        self.stack -= 8
                 else:
-                    print(f"unprocessed {scope} initializer for", node.info)
+                    self.process(node.e1)
+                    self.code.append(
+                        pop_quad(
+                            reg=f"-{self.scope[name].offset}(%rbp)",
+                            intro=f"store in local var {name}",
+                        )
+                    )
+                    self.stack -= 8
             else:
                 print("unprocessed initializer for", node.info)
         elif node.typ == "unop":
@@ -175,6 +190,15 @@ class CodeGenerator:
                     print("unprocessed binop for two strings", node.info["op"])
                 self.stack -= 8
                 return "str"
+            elif type0 == "mat":
+                if node.info["op"] == "plus":
+                    self.code.append(
+                        binop_mat(binop="addmat", intro="add two matrices")
+                    )
+                else:
+                    print("unprocessed binop for two matrices", node.info["op"])
+                self.stack -= 8
+                return "mat"
         elif node.typ == "number":
             label, code = local_double_number(node.info)
             self.code.append(load_quad(reg=f"{label}(%rip)"))
@@ -217,7 +241,7 @@ class CodeGenerator:
                 self.stack -= 8
             self.adjust_stack()
             self.code.append(function_call(name, returntype, an))
-            if returntype in ("double", "str"):
+            if returntype in ("double", "str", "mat"):
                 self.stack += 8
             elif returntype == "void":
                 pass
@@ -226,7 +250,7 @@ class CodeGenerator:
             return returntype
         elif node.typ == "var reference":
             if (
-                node.info["type"] in ("double", "str")
+                node.info["type"] in ("double", "str", "mat")
                 and node.info["scope"] == "global"
             ):
                 name = node.info["name"]
@@ -238,7 +262,8 @@ class CodeGenerator:
                 )
                 self.stack += 8
             elif (
-                node.info["type"] in ("double", "str") and node.info["scope"] == "local"
+                node.info["type"] in ("double", "str", "mat")
+                and node.info["scope"] == "local"
             ):
                 name = node.info["name"]
                 self.code.append(
@@ -269,8 +294,8 @@ class CodeGenerator:
             self.code.append(function_postamble(self.function))
             self.code, self.fdefinitions = self.fdefinitions, self.code
         elif node.typ == "return":
-            self.process(node.e0)
-            self.code.append(pop_quad(reg=f"%xmm0"))
+            rtype = self.process(node.e0)
+            self.code.append(pop_quad(reg=f"{'%xmm0' if rtype=='double' else '%rax'}"))
             self.stack -= 8
             self.code.append(f"        jmp end_{self.function}")
         else:
@@ -281,7 +306,7 @@ class CodeGenerator:
         and return the total amount of space to reserve on the stack."""
         size = 0
         for name, symbol in self.scope.items():
-            if symbol.type in ("double", "str"):
+            if symbol.type in ("double", "str", "mat"):
                 size += 8
                 symbol.offset = size
             else:
@@ -301,7 +326,7 @@ class CodeGenerator:
                 self.code.append(
                     store_argument(reg, symbol.offset, symbol.name, symbol.type)
                 )
-            elif symbol.type == "str":
+            elif symbol.type in ("str", "mat"):
                 reg = regs.pop(0)
                 self.code.append(
                     store_argument(reg, symbol.offset, symbol.name, symbol.type)
