@@ -1,10 +1,10 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220311102322
+# Version: 20220311154311
 
-import code
 from argparse import ArgumentError
+from collections import defaultdict
 from dataclasses import dataclass
 from functools import reduce
 
@@ -60,6 +60,18 @@ class CodeChunk:
         else:
             intro = other.intro
         return CodeChunk(intro=intro, lines=self.lines + other.lines)
+
+
+class Label:
+    def __init__(self):
+        self.labels = defaultdict(int)
+
+    def __getitem__(self, key):
+        self.labels[key] += 1
+        return f"{key}{self.labels[key]}"
+
+
+labels = Label()
 
 
 def program_preamble():
@@ -593,3 +605,21 @@ def stack_adjust(size):
         intro="adjust stack at end of unit",
         lines=[CodeLine(opcode="add", operands=f"${size}, %rsp")],
     )
+
+
+def jump_if_false(label):
+    return CodeChunk(
+        lines=[
+            CodeLine(opcode="popq", operands="%rax"),
+            CodeLine(opcode="cmp", operands="$0, %rax"),
+            CodeLine(opcode="jz", operands=label),
+        ]
+    )
+
+
+def jump(label):
+    return CodeChunk(lines=[CodeLine(opcode="jmp", operands=label)])
+
+
+def labelCode(label):
+    return CodeChunk(lines=[CodeLine(label=label)])

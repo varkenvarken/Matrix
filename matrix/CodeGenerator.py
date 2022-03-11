@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220311125806
+# Version: 20220311152834
 
 from .CodeSnippets import *
 from .Syntax import Scope
@@ -233,7 +233,7 @@ class CodeGenerator:
             self.code.append(f"# function call {name}")
             an = 0
             arg = node.e0
-            if arg is not None: # empty parameter list is allowed
+            if arg is not None:  # empty parameter list is allowed
                 assert arg.typ == "argument"
                 argtypes = []
                 while arg:
@@ -337,6 +337,22 @@ class CodeGenerator:
                         intro=f"store in local var {symbol.name}",
                     )
                 )
+        elif node.typ == "if":
+            etype = self.process(node.e0)
+            # TODO: verify etype is double
+            else_label = labels["else"]
+            end_label = labels["endif"]
+            self.code.append(
+                jump_if_false(else_label if node.e2 is not None else end_label)
+            )
+            self.stack -= 8
+            self.process(node.e1)
+            if node.e2 is not None:
+                self.code.append(jump(end_label))
+                self.code.append(labelCode(else_label))
+                self.process(node.e2)
+            self.code.append(labelCode(end_label))
+
         else:
             print("unprocessed syntax node", node)
 
