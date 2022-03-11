@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220311094345
+# Version: 20220311104235
 
 from ast import While
 from math import expm1
@@ -292,7 +292,8 @@ class SyntaxTree:
             while plist is not None:
                 parameter = plist.e1
                 plist = plist.e0
-                parameters.append(parameter.e0.value)
+                if parameter is not None:
+                    parameters.append(parameter.e0.value)
             # TODO: warn if redefined (with same signature)
             self.symbols[fname] = Symbol(
                 fname, "function", True, rtype=node.e0.value, parameters=parameters
@@ -305,11 +306,12 @@ class SyntaxTree:
             while plist is not None:
                 parameter = plist.e1
                 plist = plist.e0
-                name = parameter.value
-                typ = parameter.e0.value
-                parameters.append(
-                    Symbol(name, typ, False, isparameter=True)
-                )  # TODO: add option for const modifier to params?
+                if parameter is not None:
+                    name = parameter.value
+                    typ = parameter.e0.value
+                    parameters.append(
+                        Symbol(name, typ, False, isparameter=True)
+                    )  # TODO: add option for const modifier to params?
             for n, p in enumerate(reversed(parameters)):
                 p.parameterindex = n
                 self.symbols[p.name] = p

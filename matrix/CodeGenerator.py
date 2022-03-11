@@ -1,9 +1,10 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220311102844
+# Version: 20220311125806
 
 from .CodeSnippets import *
+from .Syntax import Scope
 
 
 def vardefs(scope, defs):
@@ -98,7 +99,7 @@ class CodeGenerator:
                     self.process(node.e1)
                     self.code.append(
                         store_quad(
-                            reg=f"-{self.scope[name].offset}(%rbp)",
+                            reg=f"-{self.symbols[name].offset}(%rbp)",
                             intro=f"store in local var {name}",
                         )
                     )
@@ -124,7 +125,7 @@ class CodeGenerator:
                     self.process(node.e1)
                     self.code.append(
                         pop_quad(
-                            reg=f"-{self.scope[name].offset}(%rbp)",
+                            reg=f"-{self.symbols[name].offset}(%rbp)",
                             intro=f"store in local var {name}",
                         )
                     )
@@ -159,7 +160,7 @@ class CodeGenerator:
                     self.process(node.e1)
                     self.code.append(
                         pop_quad(
-                            reg=f"-{self.scope[name].offset}(%rbp)",
+                            reg=f"-{self.symbols[name].offset}(%rbp)",
                             intro=f"store in local var {name}",
                         )
                     )
@@ -232,29 +233,31 @@ class CodeGenerator:
             self.code.append(f"# function call {name}")
             an = 0
             arg = node.e0
-            assert arg.typ == "argument"
-            argtypes = []
-            while arg:
-                self.code.append(f"# calculate argument {an}")
-                argtypes.append(self.process(arg.e1))
-                arg = arg.e0
-                an += 1
-            ndoubles = 0
-            nothers = 0
-            argregisters = []
-            regs = ["%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"]
-            for t in argtypes:
-                if t == "double":
-                    argregisters.append(f"%xmm{ndoubles}")
-                    ndoubles += 1
-                else:
-                    argregisters.append(regs.pop(0))
-                    nothers += 1
-            self.code.append(f"# popping {an} arguments usign x64 convention")
-            for i in range(an):
-                self.code.append(pop_quad(reg=argregisters.pop()))
-                self.stack -= 8
-            self.adjust_stack()
+            if arg is not None: # empty parameter list is allowed
+                assert arg.typ == "argument"
+                argtypes = []
+                while arg:
+                    self.code.append(f"# calculate argument {an}")
+                    argtypes.append(self.process(arg.e1))
+                    arg = arg.e0
+                    an += 1
+                ndoubles = 0
+                nothers = 0
+                argregisters = []
+                regs = ["%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"]
+                for t in argtypes:
+                    if t == "double":
+                        argregisters.append(f"%xmm{ndoubles}")
+                        ndoubles += 1
+                    else:
+                        argregisters.append(regs.pop(0))
+                        nothers += 1
+                self.code.append(f"# popping {an} arguments using the x64 convention")
+                for i in range(an):
+                    self.code.append(pop_quad(reg=argregisters.pop()))
+                    self.stack -= 8
+                # TODO: this should align the stack, NOT remove anything
+                self.adjust_stack()
             self.code.append(function_call(name, returntype, an))
             if returntype in ("double", "str", "mat"):
                 self.stack += 8
@@ -283,7 +286,7 @@ class CodeGenerator:
                 name = node.info["name"]
                 self.code.append(
                     load_quad(
-                        reg=f"-{self.scope[name].offset}(%rbp)",
+                        reg=f"-{self.symbols[name].offset}(%rbp)",
                         linecomment=f"local var reference {node.info['type']}:{name}",
                     )
                 )
@@ -298,14 +301,15 @@ class CodeGenerator:
             # function definitions should not appear in the middel of the main code
             # so we keep separate sets of generated code lines
             self.code, self.fdefinitions = self.fdefinitions, self.code
-            self.scope = node.info["scope"]
+            self.symbols = Scope(outer=self.symbols)
+            self.symbols.symbols.update(node.info["scope"])
             # calculate space for local vars and calc their offsets
             size = self.processScope()
             self.code.append(function_preamble(self.function, size))
             self.moveArgumentsToStack()
             # process the function body
             self.process(node.e0)
-            self.scope = {}
+            self.symbols = self.symbols.outer
             self.code.append(function_postamble(self.function))
             self.code, self.fdefinitions = self.fdefinitions, self.code
         elif node.typ == "return":
@@ -329,7 +333,7 @@ class CodeGenerator:
             else:
                 self.code.append(
                     move_quad(
-                        reg=f"-{self.scope[symbol.name].offset}(%rbp)",
+                        reg=f"-{self.symbols[symbol.name].offset}(%rbp)",
                         intro=f"store in local var {symbol.name}",
                     )
                 )
@@ -340,7 +344,7 @@ class CodeGenerator:
         """calculate offsets if automatic (local) variables
         and return the total amount of space to reserve on the stack."""
         size = 0
-        for name, symbol in self.scope.items():
+        for name, symbol in self.symbols.symbols.items():
             if symbol.type in ("double", "str", "mat"):
                 size += 8
                 symbol.offset = size
@@ -351,7 +355,11 @@ class CodeGenerator:
         return size
 
     def moveArgumentsToStack(self):
-        args = [symbol for name, symbol in self.scope.items() if symbol.isparameter]
+        args = [
+            symbol
+            for name, symbol in self.symbols.symbols.items()
+            if symbol.isparameter
+        ]
         args.sort(key=lambda s: s.parameterindex)
         xmms = [f"%xmm{i}" for i in range(8)]
         regs = ["%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"]
