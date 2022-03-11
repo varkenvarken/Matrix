@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220311152834
+# Version: 20220311155946
 
 from .CodeSnippets import *
 from .Syntax import Scope
@@ -91,7 +91,7 @@ class CodeGenerator:
                         self.code.append(
                             store_quad(
                                 reg=f"{name}(%rip)",
-                                intro="store in global var {name}",
+                                intro=f"store in global var {name}",
                             )
                         )
                         self.stack -= 8
@@ -351,6 +351,17 @@ class CodeGenerator:
                 self.code.append(jump(end_label))
                 self.code.append(labelCode(else_label))
                 self.process(node.e2)
+            self.code.append(labelCode(end_label))
+        elif node.typ == "while":
+            while_label = labels["while"]
+            end_label = labels["endwhile"]
+            self.code.append(labelCode(while_label))
+            etype = self.process(node.e0)
+            # TODO: verify etype is double
+            self.code.append(jump_if_false(end_label))
+            self.stack -= 8
+            self.process(node.e1)
+            self.code.append(jump(while_label))
             self.code.append(labelCode(end_label))
 
         else:

@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220311153648
+# Version: 20220311155434
 
 from ast import While
 from math import expm1
@@ -354,6 +354,15 @@ class SyntaxTree:
             )
         elif node.token in ("then", "else"):
             return self.process(node.e1)
+        elif node.token == "while":
+            return SyntaxNode(
+                "while",
+                "",
+                level=node.level + 1,
+                **node.src(),
+                e0=self.process(node.e0),
+                e1=self.process(node.e1),
+            )
         else:
             print("unrecognized ParseNode", node)
             return None

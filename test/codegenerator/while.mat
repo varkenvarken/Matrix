@@ -1,0 +1,13 @@
+extern fun void printdouble(double d)
+extern fun void printstring(str s)
+extern fun void print_matrix(mat m)
+
+
+double count = 10
+double dec = -1 // we haven implemented minus yet
+
+while count:
+    printdouble(count)
+    count = count + dec
+
+printstring("done")
