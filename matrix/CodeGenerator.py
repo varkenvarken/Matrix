@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220310171255
+# Version: 20220311102844
 
 from .CodeSnippets import *
 
@@ -52,7 +52,7 @@ class CodeGenerator:
 
     def adjust_stack(self):
         if self.stack != 0:
-            self.code.append(f"        add ${self.stack}, %rsp")
+            self.code.append(stack_adjust(self.stack))
             self.stack = 0
 
     def process(self, node):
@@ -140,14 +140,21 @@ class CodeGenerator:
                         self.code.append(matCopy(litname, name))
                     else:  # initializer expression
                         self.symbols[name].constoverride = True
-                        self.process(node.e1)
-                        self.code.append(
-                            store_quad(
-                                reg=f"{name}(%rip)",
-                                intro="store in global var {name}",
+                        typ = self.process(node.e1)
+                        if typ == "double":
+                            print(
+                                f"mat initializer expression of type {typ} ignored for now"
                             )
-                        )
-                        self.stack -= 8
+                        elif typ == "mat":
+                            self.code.append(
+                                store_quad(
+                                    reg=f"{name}(%rip)",
+                                    intro=f"store in global var {name}",
+                                )
+                            )
+                            self.stack -= 8
+                        else:
+                            print(f"illegal mat intializer expression of type {typ}")
                 else:
                     self.process(node.e1)
                     self.code.append(
@@ -211,6 +218,14 @@ class CodeGenerator:
             self.stack += 8
             self.locals.append(code)
             return "str"
+        elif node.typ == "matrixliteral":
+            label, code = local_matrix(node.info)
+            self.code.append(
+                load_quad(reg=f"{label}(%rip)")
+            )  # not load_address because we need to dereference the pointer to the matrix decriptor
+            self.stack += 8
+            self.locals.append(code)
+            return "mat"
         elif node.typ == "call":
             returntype = node.info["type"]
             name = node.info["name"]
@@ -298,6 +313,26 @@ class CodeGenerator:
             self.code.append(pop_quad(reg=f"{'%xmm0' if rtype=='double' else '%rax'}"))
             self.stack -= 8
             self.code.append(f"        jmp end_{self.function}")
+        elif node.typ == "assign":
+            symbol = self.symbols[node.info]
+            typ = self.process(node.e0)
+            assert symbol.type == typ
+            # Note that assignment is an expression so we do not pop the stack
+            # TODO: check for const
+            if symbol.scope == "global":
+                self.code.append(
+                    move_quad(
+                        reg=f"{symbol.name}(%rip)",
+                        intro=f"store in global var {symbol.name}",
+                    )
+                )
+            else:
+                self.code.append(
+                    move_quad(
+                        reg=f"-{self.scope[symbol.name].offset}(%rbp)",
+                        intro=f"store in local var {symbol.name}",
+                    )
+                )
         else:
             print("unprocessed syntax node", node)
 

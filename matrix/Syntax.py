@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220310113808
+# Version: 20220311094345
 
 from ast import While
 from math import expm1
@@ -167,9 +167,9 @@ class SyntaxTree:
                 if vardecl.e0 is None:
                     dnode.e1 = (
                         SyntaxNode(
-                            "stringliteral", "", level=node.level + 1, **node.src()
+                            "stringliteral", '""', level=node.level + 1, **node.src()
                         )
-                        if typ == "stringliteral"
+                        if typ == "str"
                         else SyntaxNode(
                             "number", 0, level=node.level + 1, **node.src()
                         )  # also added for an empty mat a[3,4] for example
@@ -332,6 +332,14 @@ class SyntaxTree:
                 **node.src(),
             )
             return sn
+        elif node.token == "assignment":
+            return SyntaxNode(
+                "assign",
+                node.e0.value,
+                level=node.level + 1,
+                **node.src(),
+                e0=self.process(node.e1),
+            )
         else:
             print("unrecognized ParseNode", node)
             return None

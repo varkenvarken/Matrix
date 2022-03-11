@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220310143217
+# Version: 20220311102322
 
 import code
 from argparse import ArgumentError
@@ -129,6 +129,15 @@ def store_quad(reg, intro=None, linecomment=None):
         intro=intro,
         lines=[
             CodeLine(opcode="pop", operands="%rax"),
+            CodeLine(opcode="movq", operands=f"%rax, {reg}", comment=linecomment),
+        ],
+    )
+
+
+def move_quad(reg, intro=None, linecomment=None):
+    return CodeChunk(
+        intro=intro,
+        lines=[
             CodeLine(opcode="movq", operands=f"%rax, {reg}", comment=linecomment),
         ],
     )
@@ -358,7 +367,10 @@ def vardef(v):
         code = CodeChunk(
             lines=[
                 CodeLine(opcode=f".global {v.name}"),
-                CodeLine(opcode=".section", operands=".rodata"),
+                CodeLine(
+                    opcode=".section",
+                    operands=".rodata" if v.const and not v.constoverride else ".data",
+                ),
                 CodeLine(opcode=".p2align", operands="3"),
                 CodeLine(opcode=".type", operands=f"{v.name}, @object"),
                 CodeLine(opcode=".size", operands=f"{v.name}, 8"),
@@ -560,6 +572,10 @@ def globalMatInit(symbol, info):
     return matLiteral(info["shape"], info["values"])
 
 
+def local_matrix(info):
+    return matLiteral(info["shape"], info["values"])
+
+
 def fileref(filenumber, filename):
     return CodeChunk(
         lines=[CodeLine(opcode=".file", operands=f'{filenumber} "{filename}"')]
@@ -569,4 +585,11 @@ def fileref(filenumber, filename):
 def location(filenumber, lineno, index):
     return CodeChunk(
         lines=[CodeLine(opcode=".loc", operands=f"{filenumber} {lineno} {index}")]
+    )
+
+
+def stack_adjust(size):
+    return CodeChunk(
+        intro="adjust stack at end of unit",
+        lines=[CodeLine(opcode="add", operands=f"${size}, %rsp")],
     )
