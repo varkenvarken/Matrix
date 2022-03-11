@@ -1,9 +1,9 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220309144220
+# Version: 20220311135636
 
-from re import compile, search
+from re import compile, match, search
 
 from sly import Lexer
 from sly.lex import Token
@@ -25,9 +25,7 @@ class MatrixToken(Token):
         return token
 
     def __str__(self):
-        return (
-            f"{token.type} {token.value} {token.filename}:{token.lineno}:{token.index}"
-        )
+        return f"{self.type} {self.value} {self.filename}:{self.lineno}:{self.index}"
 
 
 class MatrixLexer(Lexer):
@@ -138,6 +136,13 @@ class MatrixLexer(Lexer):
         print("Illegal character '%s'" % t.value[0])
         self.index += 1
 
+    empty_line_pattern = compile(r"\s*(((\#)|(//)).*)?$")
+
+    @staticmethod
+    def is_empty(line):
+        m = match(MatrixLexer.empty_line_pattern, line)
+        return m is not None
+
     def tokenizeFromInputStream(self, stream):
         """
         Tokenize from an iterator that yields lines.
@@ -157,7 +162,20 @@ class MatrixLexer(Lexer):
         filename = "<unknown>"
         indent = [""]
         level = 0
+        holdback = None
         for lineno, line in enumerate(stream):
+
+            if MatrixLexer.is_empty(line):
+                tok = MatrixToken()
+                tok.type = "NEWLINE"
+                tok.value = "\n"
+                tok.lineno = lineno
+                tok.index = 0
+                tok.line = line
+                tok.filename = filename
+                holdback = tok
+                continue
+
             space = leading_space(line)
             lineno -= 1
             try:
@@ -197,6 +215,11 @@ class MatrixLexer(Lexer):
                 tok.line = line
                 tok.filename = filename
                 yield tok
+
+            if holdback is not None:
+                yield holdback
+                holdback = None
+
             for token in self.tokenize(line, lineno=lineno):
                 tok = MatrixToken.fromToken(token)
                 tok.line = line
