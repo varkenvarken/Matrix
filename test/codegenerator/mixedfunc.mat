@@ -5,7 +5,7 @@ str hello = "Hello"
 
 fun void myfunc(str a, double b):
     double bbb = 3.14 + b     // we should that var refs are to initialized vars
-    str aaa = a + " world"    // assignment does not check type yet
+    str aaa = a + " world"    // assignment does not check type
     printdouble(bbb)
     printstring(aaa)
 

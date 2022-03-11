@@ -1,0 +1,13 @@
+mat a = [[[1, 2, 3],[3,4,5]],[[1,8, 3],[3,4,5]]]
+
+mat b[3,3]
+
+mat c = a + a
+
+extern fun void print_matrix(mat m)
+
+fun mat mat_x2(mat m):
+    mat m2 = m + m
+    return m2
+
+print_matrix(mat_x2(c))

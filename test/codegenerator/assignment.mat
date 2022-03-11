@@ -1,0 +1,16 @@
+extern fun void printdouble(double d)
+extern fun void printstring(str s)
+extern fun void print_matrix(mat m)
+
+
+double c
+str s
+mat m
+
+c = 1 + 3
+s = "Hello, " + "world!"
+m = [[1,2],[3,4]]
+
+printdouble(c)
+printstring(s)
+print_matrix(m)

@@ -1,0 +1,28 @@
+extern fun void printdouble(double d)
+extern fun void printstring(str s)
+extern fun void print_matrix(mat m)
+
+
+if 1:
+    printstring("one")
+
+if 0:
+    printstring("one")
+else:
+    printstring("zero")
+
+if 1:
+    if 1:
+        printstring("one")
+        printstring("one")
+else:
+    printstring("zero")
+
+if 0:
+    printstring("one")
+else:
+    if 1:
+        printstring("zero")
+        printstring("one")
+
+printstring("done")

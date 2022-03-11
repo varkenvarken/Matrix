@@ -1,0 +1,19 @@
+extern fun void printdouble(double d)
+extern fun void printstring(str s)
+extern fun void print_matrix(mat m)
+
+
+fun void myfunc():
+    double d
+    str s
+    mat m
+    d = 3.14
+    printdouble(d)
+
+    s = "Hello, world!"
+    printstring(s)
+// oink
+    m = [[1,2],[3,4]]
+    print_matrix(m)
+
+myfunc()
