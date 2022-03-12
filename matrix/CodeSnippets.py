@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220311170102
+# Version: 20220312164329
 
 from argparse import ArgumentError
 from collections import defaultdict
@@ -576,6 +576,30 @@ def matCopy(src, dst):
             CodeLine(opcode="leaq", operands=f"{src}(%rip), %rdi"),
             CodeLine(opcode="leaq", operands=f"{dst}(%rip), %rsi"),
             CodeLine(opcode="call", operands="matrixcopy"),
+        ],
+    )
+
+
+def matCopy2():
+    return CodeChunk(
+        intro=f"copy matrix [stack - 1] -> [stack] (both elements are pointers to descriptors)",
+        lines=[
+            CodeLine(
+                opcode="movq",
+                operands=f"(%rsp), %rdi",
+                comment="top is src matrix (view) and goes into 1st argument (= %rdi) but we keep it on the stack",
+            ),
+            CodeLine(
+                opcode="movq",
+                operands=f"8(%rsp), %rsi",
+                comment="top -1 is dst matrix (view) and goes into 2nd argument (= %rsi) but we keep it on the stack",
+            ),
+            CodeLine(opcode="call", operands="descriptorcopy"),
+            CodeLine(
+                opcode="add",
+                operands="$8, %rsp",
+                comment="discard destination address but keep src on top",
+            ),
         ],
     )
 

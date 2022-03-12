@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220311162746
+# Version: 20220312151741
 
 from ast import While
 from math import expm1
@@ -373,7 +373,8 @@ class SyntaxTree:
                 node.e0.value,
                 level=node.level + 1,
                 **node.src(),
-                e0=self.process(node.e1),
+                e0=self.process(node.e0),
+                e1=self.process(node.e1),
             )
         elif node.token == "if":
             return SyntaxNode(
