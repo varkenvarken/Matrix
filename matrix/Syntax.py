@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220311155434
+# Version: 20220311162746
 
 from ast import While
 from math import expm1
@@ -280,6 +280,39 @@ class SyntaxTree:
                 level=node.level + 1,
                 **node.src(),
             )
+        elif node.token == "indexed name":
+            name = node.value
+            if name not in self.symbols:
+                print(f"unknown variable {name}")
+                return None
+            var = self.symbols[name]
+            return SyntaxNode(
+                "var reference",
+                {"name": name, "scope": var.scope, "type": var.type},
+                level=node.level + 1,
+                **node.src(),
+                e0=self.process(node.e0),
+            )
+        elif node.token == "indexlist":
+            return SyntaxNode(
+                "indexlist",
+                "",
+                level=node.level + 1,
+                **node.src(),
+                e0=self.process(node.e0),
+                e1=self.process(node.e1),
+            )
+        elif node.token == "slice":
+            if node.value == "index":  # single index expression without stop or step
+                return SyntaxNode(
+                    "index",
+                    "",
+                    level=node.level + 1,
+                    **node.src(),
+                    e0=self.process(node.e0),
+                )
+            else:
+                print(f"slice format {node.value} ignored for now")
         elif node.token == "function definition":
             fname = node.value
             # check if name already defined

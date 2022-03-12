@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220311154311
+# Version: 20220311170102
 
 from argparse import ArgumentError
 from collections import defaultdict
@@ -586,6 +586,24 @@ def globalMatInit(symbol, info):
 
 def local_matrix(info):
     return matLiteral(info["shape"], info["values"])
+
+
+def index_matrix():
+    return CodeChunk(
+        intro="index a matrix",
+        lines=[
+            CodeLine(opcode="popq", operands="%rax"),
+            CodeLine(opcode="movq", operands="%rax, %xmm0"),
+            CodeLine(
+                opcode="cvtsd2si",
+                operands="%xmm0, %rsi",
+                comment="convert single double to long",
+            ),
+            CodeLine(opcode="popq", operands="%rdi"),
+            CodeLine(opcode="call", operands="matrix_index"),
+            CodeLine(opcode="push", operands="%rax"),
+        ],
+    )
 
 
 def fileref(filenumber, filename):

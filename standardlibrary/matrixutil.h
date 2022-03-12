@@ -9,5 +9,5 @@ void matrixcopy(matrix_descriptor **src, matrix_descriptor **dst);
 matrix_descriptor *matrix_malloc_desc(matrix_descriptor *src);
 long matrix_data_elements(matrix_descriptor *m);
 void print_matrix(matrix_descriptor *m);
-
+matrix_descriptor *matrix_index(matrix_descriptor *m, long index)
 #endif

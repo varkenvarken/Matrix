@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220311155946
+# Version: 20220311164619
 
 from .CodeSnippets import *
 from .Syntax import Scope
@@ -279,6 +279,21 @@ class CodeGenerator:
                     )
                 )
                 self.stack += 8
+                if node.e0 is not None:
+                    assert node.e0.typ == "indexlist"
+                    indexlist = node.e0
+                    while indexlist is not None:
+                        index_or_slice = indexlist.e0
+                        indexlist = indexlist.e1
+                        if index_or_slice.typ == "index":
+                            self.process(index_or_slice.e0)
+                            self.code.append(index_matrix())
+                            self.stack -= 8
+                        else:
+                            print(
+                                f"index type of {index_or_slice.typ} ignored on {name}"
+                            )
+
             elif (
                 node.info["type"] in ("double", "str", "mat")
                 and node.info["scope"] == "local"
@@ -291,6 +306,9 @@ class CodeGenerator:
                     )
                 )
                 self.stack += 8
+                if node.e0 is not None:
+                    assert node.e0.typ == "indexlist"
+                    print(f"unprocessed local slice/index {name}")
             else:
                 print(
                     f'unprocessed var reference {node.info["scope"]} {node.info["type"]} {node.info["name"]}'
