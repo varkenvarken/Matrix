@@ -9,3 +9,5 @@ A programming language with a focus on easy matrix calculations.
 - MIT license
 
 Very much a work in progress and intended as a personal exercise in creating something a little bit more complete than your average toy language.
+
+Documentation (if any) will be on [https://varkenvarken.github.io/Matrix/]
