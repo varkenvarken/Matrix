@@ -1,0 +1,56 @@
+globals
+global printdouble     fun  :void (double)
+global c            (-1) var  :double  = None
+global myfunc          fun  :double (double,double)
+
+ 29  (program:start) e0 -> [  28] 
+ 28      (unit:) e1 -> [  27] 
+ 27        (unit:) e0 -> [   1], e1 -> [  26] 
+  1          (initialize:double) e0 -> [   2], e1 -> [   3] 
+             3:13:double c = 12
+  2          (assign:('global', 'c'))  
+             3:13:double c = 12
+  3                (number:12.0)  
+                   3:11:double c = 12
+ 26          (unit:) e0 -> [  13], e1 -> [  25] 
+ 13            (function definition:{'name': 'myfunc', 'scope': {'a': local  a           p( 0) var  :double  = None, 'b': local  b           p( 1) var  :double  = None, 'c': local  c            (-1) var  :double  = None}, 'rtype': 'double', 'ptypes': [local  a           p( 0) var  :double  = None, local  b           p( 1) var  :double  = None]}) e0 -> [  12] 
+               5:11:fun double myfunc(double a, double b):
+ 12                (unit:) e0 -> [   4], e1 -> [  11] 
+  4                  (initialize:double) e0 -> [   5], e1 -> [   8] 
+                     6:20:    double c = a + b
+  5                  (assign:('local', 'c'))  
+                     6:20:    double c = a + b
+  8                        (binop:{'op': 'plus'}) e0 -> [   6], e1 -> [   7] 
+                           6:17:    double c = a + b
+  6                          (var reference:{'name': 'a', 'scope': 'local', 'type': 'double'})  
+                             6:15:    double c = a + b
+  7                          (var reference:{'name': 'b', 'scope': 'local', 'type': 'double'})  
+                             6:19:    double c = a + b
+ 11                  (unit:) e0 -> [  10] 
+ 10                    (return:) e0 -> [   9] 
+                       7:4:    return c
+  9                      (var reference:{'name': 'c', 'scope': 'local', 'type': 'double'})  
+                         7:11:    return c
+ 25            (unit:) e0 -> [  14] 
+ 14              (call:{'name': 'printdouble', 'type': 'void'}) e0 -> [  24] 
+                 9:11:printdouble(myfunc(10+7,20+5))
+ 24              (argument:) e1 -> [  15] 
+                 9:11:printdouble(myfunc(10+7,20+5))
+ 15                  (call:{'name': 'myfunc', 'type': 'double'}) e0 -> [  22] 
+                     9:12:printdouble(myfunc(10+7,20+5))
+ 22                  (argument:) e0 -> [  23], e1 -> [  21] 
+                     9:12:printdouble(myfunc(10+7,20+5))
+ 23                  (argument:) e1 -> [  18] 
+                     9:12:printdouble(myfunc(10+7,20+5))
+ 18                      (binop:{'op': 'plus'}) e0 -> [  16], e1 -> [  17] 
+                         9:26:printdouble(myfunc(10+7,20+5))
+ 16                        (number:20.0)  
+                           9:24:printdouble(myfunc(10+7,20+5))
+ 17                        (number:5.0)  
+                           9:27:printdouble(myfunc(10+7,20+5))
+ 21                        (binop:{'op': 'plus'}) e0 -> [  19], e1 -> [  20] 
+                           9:21:printdouble(myfunc(10+7,20+5))
+ 19                          (number:10.0)  
+                             9:19:printdouble(myfunc(10+7,20+5))
+ 20                          (number:7.0)  
+                             9:22:printdouble(myfunc(10+7,20+5))

@@ -1,0 +1,109 @@
+globals
+global printdouble     fun  :void (double)
+global printstring     fun  :void (str)
+global print_matrix    fun  :void (mat)
+
+ 62  (program:start) e0 -> [  61] 
+ 61      (unit:) e1 -> [  60] 
+ 60        (unit:) e1 -> [  59] 
+ 59          (unit:) e1 -> [  58] 
+ 58            (unit:) e0 -> [   6], e1 -> [  57] 
+  6              (if:) e0 -> [   1], e1 -> [   5] 
+                 6:4:if 1:
+  1                (number:1.0)  
+                   6:3:if 1:
+  5                  (unit:) e0 -> [   2] 
+  2                    (call:{'name': 'printstring', 'type': 'void'}) e0 -> [   4] 
+                       7:4:    printstring("one")
+  4                    (argument:) e1 -> [   3] 
+                       7:4:    printstring("one")
+  3                        (stringliteral:"one")  
+                           7:16:    printstring("one")
+ 57              (unit:) e0 -> [  16], e1 -> [  56] 
+ 16                (if:) e0 -> [   7], e1 -> [  11], e2 -> [  15] 
+                   9:4:if 0:
+  7                  (number:0.0)  
+                     9:3:if 0:
+ 11                    (unit:) e0 -> [   8] 
+  8                      (call:{'name': 'printstring', 'type': 'void'}) e0 -> [  10] 
+                         10:4:    printstring("one")
+ 10                      (argument:) e1 -> [   9] 
+                         10:4:    printstring("one")
+  9                          (stringliteral:"one")  
+                             10:16:    printstring("one")
+ 15                    (unit:) e0 -> [  12] 
+ 12                      (call:{'name': 'printstring', 'type': 'void'}) e0 -> [  14] 
+                         12:4:    printstring("zero")
+ 14                      (argument:) e1 -> [  13] 
+                         12:4:    printstring("zero")
+ 13                          (stringliteral:"zero")  
+                             12:16:    printstring("zero")
+ 56                (unit:) e0 -> [  33], e1 -> [  55] 
+ 33                  (if:) e0 -> [  17], e1 -> [  28], e2 -> [  32] 
+                     14:4:if 1:
+ 17                    (number:1.0)  
+                       14:3:if 1:
+ 28                      (unit:) e0 -> [  27] 
+ 27                        (if:) e0 -> [  18], e1 -> [  26] 
+                           15:4:    if 1:
+ 18                          (number:1.0)  
+                             15:7:    if 1:
+ 26                            (unit:) e0 -> [  19], e1 -> [  25] 
+ 19                              (call:{'name': 'printstring', 'type': 'void'}) e0 -> [  21] 
+                                 16:8:        printstring("one")
+ 21                              (argument:) e1 -> [  20] 
+                                 16:8:        printstring("one")
+ 20                                  (stringliteral:"one")  
+                                     16:20:        printstring("one")
+ 25                              (unit:) e0 -> [  22] 
+ 22                                (call:{'name': 'printstring', 'type': 'void'}) e0 -> [  24] 
+                                   17:8:        printstring("one")
+ 24                                (argument:) e1 -> [  23] 
+                                   17:8:        printstring("one")
+ 23                                    (stringliteral:"one")  
+                                       17:20:        printstring("one")
+ 32                      (unit:) e0 -> [  29] 
+ 29                        (call:{'name': 'printstring', 'type': 'void'}) e0 -> [  31] 
+                           19:4:    printstring("zero")
+ 31                        (argument:) e1 -> [  30] 
+                           19:4:    printstring("zero")
+ 30                            (stringliteral:"zero")  
+                               19:16:    printstring("zero")
+ 55                  (unit:) e0 -> [  50], e1 -> [  54] 
+ 50                    (if:) e0 -> [  34], e1 -> [  38], e2 -> [  49] 
+                       21:4:if 0:
+ 34                      (number:0.0)  
+                         21:3:if 0:
+ 38                        (unit:) e0 -> [  35] 
+ 35                          (call:{'name': 'printstring', 'type': 'void'}) e0 -> [  37] 
+                             22:4:    printstring("one")
+ 37                          (argument:) e1 -> [  36] 
+                             22:4:    printstring("one")
+ 36                              (stringliteral:"one")  
+                                 22:16:    printstring("one")
+ 49                        (unit:) e0 -> [  48] 
+ 48                          (if:) e0 -> [  39], e1 -> [  47] 
+                             24:4:    if 1:
+ 39                            (number:1.0)  
+                               24:7:    if 1:
+ 47                              (unit:) e0 -> [  40], e1 -> [  46] 
+ 40                                (call:{'name': 'printstring', 'type': 'void'}) e0 -> [  42] 
+                                   25:8:        printstring("zero")
+ 42                                (argument:) e1 -> [  41] 
+                                   25:8:        printstring("zero")
+ 41                                    (stringliteral:"zero")  
+                                       25:20:        printstring("zero")
+ 46                                (unit:) e0 -> [  43] 
+ 43                                  (call:{'name': 'printstring', 'type': 'void'}) e0 -> [  45] 
+                                     26:8:        printstring("one")
+ 45                                  (argument:) e1 -> [  44] 
+                                     26:8:        printstring("one")
+ 44                                      (stringliteral:"one")  
+                                         26:20:        printstring("one")
+ 54                    (unit:) e0 -> [  51] 
+ 51                      (call:{'name': 'printstring', 'type': 'void'}) e0 -> [  53] 
+                         28:11:printstring("done")
+ 53                      (argument:) e1 -> [  52] 
+                         28:11:printstring("done")
+ 52                          (stringliteral:"done")  
+                             28:12:printstring("done")

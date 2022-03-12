@@ -1,0 +1,189 @@
+Grammar:
+
+Rule 0     S' -> program
+Rule 1     program -> _1_repeat
+Rule 2     _1_repeat -> _1_items
+Rule 3     _1_repeat -> <empty>
+Rule 4     _1_items -> _1_items _1_item
+Rule 5     _1_items -> _1_item
+Rule 6     _1_item -> unit
+Rule 7     suite -> _2_repeat
+Rule 8     _2_repeat -> _2_items
+Rule 9     _2_repeat -> <empty>
+Rule 10    _2_items -> _2_items _2_item
+Rule 11    _2_items -> _2_item
+Rule 12    _2_item -> simpleunit
+Rule 13    unit -> simpleunit
+Rule 14    unit -> external NEWLINE
+Rule 15    unit -> function NEWLINE
+Rule 16    simpleunit -> CONST ptype vardecls NEWLINE
+Rule 17    simpleunit -> ptype vardecls NEWLINE
+Rule 18    simpleunit -> CONTINUE NEWLINE
+Rule 19    simpleunit -> BREAK NEWLINE
+Rule 20    simpleunit -> RETURN NEWLINE
+Rule 21    simpleunit -> RETURN expression NEWLINE
+Rule 22    simpleunit -> NEWLINE
+Rule 23    simpleunit -> compound
+Rule 24    simpleunit -> expression NEWLINE
+Rule 25    vardecls -> vardecl , vardecls
+Rule 26    vardecls -> vardecl
+Rule 27    vardecl -> NAME LBRACKET elist RBRACKET
+Rule 28    vardecl -> NAME = expr
+Rule 29    vardecl -> NAME
+Rule 30    expression -> expr
+Rule 31    expression -> reference = expr
+Rule 32    expr -> NAME ( arguments )
+Rule 33    expr -> LBRACKET elist RBRACKET
+Rule 34    expr -> STRINGLITERAL
+Rule 35    expr -> NUMBER
+Rule 36    expr -> reference
+Rule 37    expr -> ( expression )
+Rule 38    expr -> ( ptype ) expr  [precedence=right, level=6]
+Rule 39    expr -> ROOT expr  [precedence=right, level=5]
+Rule 40    expr -> MINUS expr  [precedence=right, level=5]
+Rule 41    expr -> expr GREATEROREQUAL expr  [precedence=left, level=1]
+Rule 42    expr -> expr LESSOREQUAL expr  [precedence=left, level=1]
+Rule 43    expr -> expr GREATER expr  [precedence=left, level=1]
+Rule 44    expr -> expr LESS expr  [precedence=left, level=1]
+Rule 45    expr -> expr NOTEQUAL expr  [precedence=left, level=1]
+Rule 46    expr -> expr EQUAL expr  [precedence=left, level=1]
+Rule 47    expr -> expr POWER expr  [precedence=right, level=4]
+Rule 48    expr -> expr MODULO expr  [precedence=left, level=3]
+Rule 49    expr -> expr / expr  [precedence=left, level=3]
+Rule 50    expr -> expr CROSS expr  [precedence=left, level=3]
+Rule 51    expr -> expr DOT expr  [precedence=left, level=3]
+Rule 52    expr -> expr MATMUL expr  [precedence=left, level=3]
+Rule 53    expr -> expr * expr  [precedence=left, level=3]
+Rule 54    expr -> expr MINUS expr  [precedence=left, level=2]
+Rule 55    expr -> expr PLUS expr  [precedence=left, level=2]
+Rule 56    reference -> NAME indexlist
+Rule 57    reference -> NAME
+Rule 58    indexlist -> LBRACKET slice RBRACKET indexlist
+Rule 59    indexlist -> LBRACKET slice RBRACKET
+Rule 60    slice -> expr
+Rule 61    slice -> vexpr COLON vexpr
+Rule 62    slice -> vexpr COLON vexpr COLON vexpr
+Rule 63    vexpr -> empty
+Rule 64    vexpr -> expr
+Rule 65    elist -> expr , elist
+Rule 66    elist -> expr
+Rule 67    arguments -> empty
+Rule 68    arguments -> alist
+Rule 69    alist -> alist , expression
+Rule 70    alist -> expression
+Rule 71    function -> FUN rtype NAME ( parameters ) COLON NEWLINE INDENT suite DEDENT
+Rule 72    external -> EXTERN FUN rtype NAME ( parameters )
+Rule 73    rtype -> FLOATVECTOR
+Rule 74    rtype -> FLOATMATRIX
+Rule 75    rtype -> VECTOR
+Rule 76    rtype -> MATRIX
+Rule 77    rtype -> STRING
+Rule 78    rtype -> DOUBLE
+Rule 79    rtype -> FLOAT
+Rule 80    rtype -> LONG
+Rule 81    rtype -> VOID
+Rule 82    ptype -> FLOATVECTOR
+Rule 83    ptype -> FLOATMATRIX
+Rule 84    ptype -> VECTOR
+Rule 85    ptype -> MATRIX
+Rule 86    ptype -> STRING
+Rule 87    ptype -> DOUBLE
+Rule 88    ptype -> FLOAT
+Rule 89    ptype -> LONG
+Rule 90    parameters -> empty
+Rule 91    parameters -> plist
+Rule 92    plist -> plist , ptype NAME
+Rule 93    plist -> ptype NAME
+Rule 94    compound -> FOR NAME IN expr COLON NEWLINE INDENT suite DEDENT
+Rule 95    compound -> WHILE expression COLON NEWLINE INDENT suite DEDENT
+Rule 96    compound -> IF expression COLON NEWLINE INDENT suite DEDENT _3_optional
+Rule 97    _3_optional -> ELSE COLON NEWLINE INDENT suite DEDENT
+Rule 98    _3_optional -> <empty>
+Rule 99    empty -> <empty>
+
+Terminals, with rules where they appear:
+
+(                    : 32 37 38 71 72
+)                    : 32 37 38 71 72
+*                    : 53
+,                    : 25 65 69 92
+/                    : 49
+=                    : 28 31
+BREAK                : 19
+COLON                : 61 62 62 71 94 95 96 97
+CONST                : 16
+CONTINUE             : 18
+CROSS                : 50
+DEDENT               : 71 94 95 96 97
+DOT                  : 51
+DOUBLE               : 78 87
+ELSE                 : 97
+EQUAL                : 46
+EXTERN               : 72
+FLOAT                : 79 88
+FLOATMATRIX          : 74 83
+FLOATVECTOR          : 73 82
+FOR                  : 94
+FUN                  : 71 72
+GREATER              : 43
+GREATEROREQUAL       : 41
+IF                   : 96
+IN                   : 94
+INDENT               : 71 94 95 96 97
+LBRACKET             : 27 33 58 59
+LESS                 : 44
+LESSOREQUAL          : 42
+LONG                 : 80 89
+MATMUL               : 52
+MATRIX               : 76 85
+MINUS                : 40 54
+MODULO               : 48
+NAME                 : 27 28 29 32 56 57 71 72 92 93 94
+NEWLINE              : 14 15 16 17 18 19 20 21 22 24 71 94 95 96 97
+NOTEQUAL             : 45
+NUMBER               : 35
+PLUS                 : 55
+POWER                : 47
+RBRACKET             : 27 33 58 59
+RETURN               : 20 21
+ROOT                 : 39
+STRING               : 77 86
+STRINGLITERAL        : 34
+VECTOR               : 75 84
+VOID                 : 81
+WHILE                : 95
+error                : 
+
+Nonterminals, with rules where they appear:
+
+_1_item              : 4 5
+_1_items             : 2 4
+_1_repeat            : 1
+_2_item              : 10 11
+_2_items             : 8 10
+_2_repeat            : 7
+_3_optional          : 96
+alist                : 68 69
+arguments            : 32
+compound             : 23
+elist                : 27 33 65
+empty                : 63 67 90
+expr                 : 28 30 31 38 39 40 41 41 42 42 43 43 44 44 45 45 46 46 47 47 48 48 49 49 50 50 51 51 52 52 53 53 54 54 55 55 60 64 65 66 94
+expression           : 21 24 37 69 70 95 96
+external             : 14
+function             : 15
+indexlist            : 56 58
+parameters           : 71 72
+plist                : 91 92
+program              : 0
+ptype                : 16 17 38 92 93
+reference            : 31 36
+rtype                : 71 72
+simpleunit           : 12 13
+slice                : 58 59
+suite                : 71 94 95 96 97
+unit                 : 6
+vardecl              : 25 26
+vardecls             : 16 17 25
+vexpr                : 61 61 62 62 62
+

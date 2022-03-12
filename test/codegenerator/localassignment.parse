@@ -1,0 +1,82 @@
+Parsetree
+
+ id  node
+---------
+ 76  (program:) e1 -> [  77] :
+ 77    (unit:) e0 -> [   6], e1 -> [  78] :
+  6      (function declaration:printdouble) e0 -> [   5], e1 -> [   4] @   1:  7:extern fun void printdouble(double d)
+  5        (return type:void)  @   1:  7:extern fun void printdouble(double d)
+  4        (plist:) e1 -> [   3] :
+  3          (parameter:d) e0 -> [   2] @   1: 35:extern fun void printdouble(double d)
+  2            (ptype:double)  @   1: 28:extern fun void printdouble(double d)
+ 78      (unit:) e0 -> [  12], e1 -> [  79] :
+ 12        (function declaration:printstring) e0 -> [  11], e1 -> [  10] @   2:  7:extern fun void printstring(str s)
+ 11          (return type:void)  @   2:  7:extern fun void printstring(str s)
+ 10          (plist:) e1 -> [   9] :
+  9            (parameter:s) e0 -> [   8] @   2: 32:extern fun void printstring(str s)
+  8              (ptype:str)  @   2: 28:extern fun void printstring(str s)
+ 79        (unit:) e0 -> [  18], e1 -> [  80] :
+ 18          (function declaration:print_matrix) e0 -> [  17], e1 -> [  16] @   3:  7:extern fun void print_matrix(mat m)
+ 17            (return type:void)  @   3:  7:extern fun void print_matrix(mat m)
+ 16            (plist:) e1 -> [  15] :
+ 15              (parameter:m) e0 -> [  14] @   3: 33:extern fun void print_matrix(mat m)
+ 14                (ptype:mat)  @   3: 29:extern fun void print_matrix(mat m)
+ 80          (unit:) e0 -> [  74], e1 -> [  81] :
+ 74            (function definition:myfunc) e0 -> [  73], e1 -> [  20], e2 -> [  63] @   6:  9:fun void myfunc():
+ 73              (return type:void)  @   6:  9:fun void myfunc():
+ 20              (plist:)  :
+ 63              (suite:) e1 -> [  64] :
+ 64                (simpleunit:) e0 -> [  24], e1 -> [  65] :
+ 24                  (vardeclist:var) e0 -> [  21], e1 -> [  23] @   7: 12:    double d
+ 21                    (ptype:double)  @   7:  4:    double d
+ 23                    (vardecls:) e0 -> [  22] :
+ 22                      (vardecl:d)  @   7: 11:    double d
+ 65                  (simpleunit:) e0 -> [  28], e1 -> [  66] :
+ 28                    (vardeclist:var) e0 -> [  25], e1 -> [  27] @   8:  9:    str s
+ 25                      (ptype:str)  @   8:  4:    str s
+ 27                      (vardecls:) e0 -> [  26] :
+ 26                        (vardecl:s)  @   8:  8:    str s
+ 66                    (simpleunit:) e0 -> [  32], e1 -> [  67] :
+ 32                      (vardeclist:var) e0 -> [  29], e1 -> [  31] @   9:  9:    mat m
+ 29                        (ptype:mat)  @   9:  4:    mat m
+ 31                        (vardecls:) e0 -> [  30] :
+ 30                          (vardecl:m)  @   9:  8:    mat m
+ 67                      (simpleunit:) e0 -> [  35], e1 -> [  68] :
+ 35                        (assignment:) e0 -> [  33], e1 -> [  34] @  10:  6:    d = 3.14
+ 33                          (name:d)  @  10:  4:    d = 3.14
+ 34                          (number:3.14)  @  10:  8:    d = 3.14
+ 68                        (simpleunit:) e0 -> [  38], e1 -> [  69] :
+ 38                          (function call:printdouble) e0 -> [  37] @  11:  4:    printdouble(d)
+ 37                            (alist:) e1 -> [  36] :
+ 36                              (name:d)  @  11: 16:    printdouble(d)
+ 69                          (simpleunit:) e0 -> [  41], e1 -> [  70] :
+ 41                            (assignment:) e0 -> [  39], e1 -> [  40] @  13:  6:    s = "Hello, world!"
+ 39                              (name:s)  @  13:  4:    s = "Hello, world!"
+ 40                              (stringliteral:"Hello, world!")  @  13:  8:    s = "Hello, world!"
+ 70                            (simpleunit:) e0 -> [  44], e1 -> [  71] :
+ 44                              (function call:printstring) e0 -> [  43] @  14:  4:    printstring(s)
+ 43                                (alist:) e1 -> [  42] :
+ 42                                  (name:s)  @  14: 16:    printstring(s)
+ 71                              (simpleunit:) e0 -> [  59], e1 -> [  72] :
+ 59                                (assignment:) e0 -> [  45], e1 -> [  58] @  16:  6:    m = [[1,2],[3,4]]
+ 45                                  (name:m)  @  16:  4:    m = [[1,2],[3,4]]
+ 58                                  (matrixliteral:) e0 -> [  57] @  16:  8:    m = [[1,2],[3,4]]
+ 57                                    (elist:) e0 -> [  50], e1 -> [  56] @  16: 14:    m = [[1,2],[3,4]]
+ 50                                      (matrixliteral:) e0 -> [  49] @  16:  9:    m = [[1,2],[3,4]]
+ 49                                        (elist:) e0 -> [  46], e1 -> [  48] @  16: 11:    m = [[1,2],[3,4]]
+ 46                                          (number:1.0)  @  16: 10:    m = [[1,2],[3,4]]
+ 48                                          (elist:) e0 -> [  47] :
+ 47                                            (number:2.0)  @  16: 12:    m = [[1,2],[3,4]]
+ 56                                      (elist:) e0 -> [  55] :
+ 55                                        (matrixliteral:) e0 -> [  54] @  16: 15:    m = [[1,2],[3,4]]
+ 54                                          (elist:) e0 -> [  51], e1 -> [  53] @  16: 17:    m = [[1,2],[3,4]]
+ 51                                            (number:3.0)  @  16: 16:    m = [[1,2],[3,4]]
+ 53                                            (elist:) e0 -> [  52] :
+ 52                                              (number:4.0)  @  16: 18:    m = [[1,2],[3,4]]
+ 72                                (simpleunit:) e0 -> [  62] :
+ 62                                  (function call:print_matrix) e0 -> [  61] @  17:  4:    print_matrix(m)
+ 61                                    (alist:) e1 -> [  60] :
+ 60                                      (name:m)  @  17: 17:    print_matrix(m)
+ 81            (unit:) e0 -> [  75] :
+ 75              (function call:myfunc)  @  19:  6:myfunc()
+

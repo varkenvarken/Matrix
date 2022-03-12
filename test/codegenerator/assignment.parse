@@ -1,0 +1,79 @@
+Parsetree
+
+ id  node
+---------
+ 65  (program:) e1 -> [  66] :
+ 66    (unit:) e0 -> [   6], e1 -> [  67] :
+  6      (function declaration:printdouble) e0 -> [   5], e1 -> [   4] @   1:  7:extern fun void printdouble(double d)
+  5        (return type:void)  @   1:  7:extern fun void printdouble(double d)
+  4        (plist:) e1 -> [   3] :
+  3          (parameter:d) e0 -> [   2] @   1: 35:extern fun void printdouble(double d)
+  2            (ptype:double)  @   1: 28:extern fun void printdouble(double d)
+ 67      (unit:) e0 -> [  12], e1 -> [  68] :
+ 12        (function declaration:printstring) e0 -> [  11], e1 -> [  10] @   2:  7:extern fun void printstring(str s)
+ 11          (return type:void)  @   2:  7:extern fun void printstring(str s)
+ 10          (plist:) e1 -> [   9] :
+  9            (parameter:s) e0 -> [   8] @   2: 32:extern fun void printstring(str s)
+  8              (ptype:str)  @   2: 28:extern fun void printstring(str s)
+ 68        (unit:) e0 -> [  18], e1 -> [  69] :
+ 18          (function declaration:print_matrix) e0 -> [  17], e1 -> [  16] @   3:  7:extern fun void print_matrix(mat m)
+ 17            (return type:void)  @   3:  7:extern fun void print_matrix(mat m)
+ 16            (plist:) e1 -> [  15] :
+ 15              (parameter:m) e0 -> [  14] @   3: 33:extern fun void print_matrix(mat m)
+ 14                (ptype:mat)  @   3: 29:extern fun void print_matrix(mat m)
+ 69          (unit:) e0 -> [  22], e1 -> [  70] :
+ 22            (vardeclist:var) e0 -> [  19], e1 -> [  21] @   6:  8:double c
+ 19              (ptype:double)  @   6:  0:double c
+ 21              (vardecls:) e0 -> [  20] :
+ 20                (vardecl:c)  @   6:  7:double c
+ 70            (unit:) e0 -> [  26], e1 -> [  71] :
+ 26              (vardeclist:var) e0 -> [  23], e1 -> [  25] @   7:  5:str s
+ 23                (ptype:str)  @   7:  0:str s
+ 25                (vardecls:) e0 -> [  24] :
+ 24                  (vardecl:s)  @   7:  4:str s
+ 71              (unit:) e0 -> [  30], e1 -> [  72] :
+ 30                (vardeclist:var) e0 -> [  27], e1 -> [  29] @   8:  5:mat m
+ 27                  (ptype:mat)  @   8:  0:mat m
+ 29                  (vardecls:) e0 -> [  28] :
+ 28                    (vardecl:m)  @   8:  4:mat m
+ 72                (unit:) e0 -> [  35], e1 -> [  73] :
+ 35                  (assignment:) e0 -> [  31], e1 -> [  34] @  10:  2:c = 1 + 3
+ 31                    (name:c)  @  10:  0:c = 1 + 3
+ 34                    (plus:) e0 -> [  32], e1 -> [  33] @  10:  6:c = 1 + 3
+ 32                      (number:1.0)  @  10:  4:c = 1 + 3
+ 33                      (number:3.0)  @  10:  8:c = 1 + 3
+ 73                  (unit:) e0 -> [  40], e1 -> [  74] :
+ 40                    (assignment:) e0 -> [  36], e1 -> [  39] @  11:  2:s = "Hello, " + "world!"
+ 36                      (name:s)  @  11:  0:s = "Hello, " + "world!"
+ 39                      (plus:) e0 -> [  37], e1 -> [  38] @  11: 14:s = "Hello, " + "world!"
+ 37                        (stringliteral:"Hello, ")  @  11:  4:s = "Hello, " + "world!"
+ 38                        (stringliteral:"world!")  @  11: 16:s = "Hello, " + "world!"
+ 74                    (unit:) e0 -> [  55], e1 -> [  75] :
+ 55                      (assignment:) e0 -> [  41], e1 -> [  54] @  12:  2:m = [[1,2],[3,4]]
+ 41                        (name:m)  @  12:  0:m = [[1,2],[3,4]]
+ 54                        (matrixliteral:) e0 -> [  53] @  12:  4:m = [[1,2],[3,4]]
+ 53                          (elist:) e0 -> [  46], e1 -> [  52] @  12: 10:m = [[1,2],[3,4]]
+ 46                            (matrixliteral:) e0 -> [  45] @  12:  5:m = [[1,2],[3,4]]
+ 45                              (elist:) e0 -> [  42], e1 -> [  44] @  12:  7:m = [[1,2],[3,4]]
+ 42                                (number:1.0)  @  12:  6:m = [[1,2],[3,4]]
+ 44                                (elist:) e0 -> [  43] :
+ 43                                  (number:2.0)  @  12:  8:m = [[1,2],[3,4]]
+ 52                            (elist:) e0 -> [  51] :
+ 51                              (matrixliteral:) e0 -> [  50] @  12: 11:m = [[1,2],[3,4]]
+ 50                                (elist:) e0 -> [  47], e1 -> [  49] @  12: 13:m = [[1,2],[3,4]]
+ 47                                  (number:3.0)  @  12: 12:m = [[1,2],[3,4]]
+ 49                                  (elist:) e0 -> [  48] :
+ 48                                    (number:4.0)  @  12: 14:m = [[1,2],[3,4]]
+ 75                      (unit:) e0 -> [  58], e1 -> [  76] :
+ 58                        (function call:printdouble) e0 -> [  57] @  14: 11:printdouble(c)
+ 57                          (alist:) e1 -> [  56] :
+ 56                            (name:c)  @  14: 12:printdouble(c)
+ 76                        (unit:) e0 -> [  61], e1 -> [  77] :
+ 61                          (function call:printstring) e0 -> [  60] @  15: 11:printstring(s)
+ 60                            (alist:) e1 -> [  59] :
+ 59                              (name:s)  @  15: 12:printstring(s)
+ 77                          (unit:) e0 -> [  64] :
+ 64                            (function call:print_matrix) e0 -> [  63] @  16: 12:print_matrix(m)
+ 63                              (alist:) e1 -> [  62] :
+ 62                                (name:m)  @  16: 13:print_matrix(m)
+

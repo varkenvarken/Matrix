@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220311164619
+# Version: 20220312160623
 
 from .CodeSnippets import *
 from .Syntax import Scope
@@ -337,24 +337,60 @@ class CodeGenerator:
             self.code.append(f"        jmp end_{self.function}")
         elif node.typ == "assign":
             symbol = self.symbols[node.info]
-            typ = self.process(node.e0)
-            assert symbol.type == typ
             # Note that assignment is an expression so we do not pop the stack
-            # TODO: check for const
-            if symbol.scope == "global":
-                self.code.append(
-                    move_quad(
-                        reg=f"{symbol.name}(%rip)",
-                        intro=f"store in global var {symbol.name}",
+            if (
+                symbol.type == "mat" and node.e0 is not None and node.e0.e0 is not None
+            ):  # assignment to indexed matrix
+                symbol = self.symbols[node.info]
+                if symbol.scope == "global":
+                    assert node.e0.e0.typ == "indexlist"
+                    indexlist = node.e0.e0
+                    self.code.append(
+                        load_quad(
+                            intro="Assignment to index matrix",
+                            reg=f"{symbol.name}(%rip)",
+                            linecomment=f"global var reference {symbol.name}",
+                        )
                     )
-                )
+                    self.stack += 8
+                    while indexlist is not None:
+                        index_or_slice = indexlist.e0
+                        indexlist = indexlist.e1
+                        if index_or_slice.typ == "index":
+                            self.process(index_or_slice.e0)
+                            self.code.append(index_matrix())
+                            self.stack -= 8
+                        else:
+                            print(
+                                f"index type of {index_or_slice.typ} ignored on {name}"
+                            )
+                    typ = self.process(node.e1)
+                    assert symbol.type == typ
+                    # at this point we have a matrixliteral on the top of the stack
+                    # and a view into the destination matrix just below it (TODO: check if dimensions match)
+                    self.code.append(matCopy2())
+                    self.stack -= 8
+                else:
+                    print(
+                        f"local indexed matrix assignment to {symbol.name} ignored for now"
+                    )
             else:
-                self.code.append(
-                    move_quad(
-                        reg=f"-{self.symbols[symbol.name].offset}(%rbp)",
-                        intro=f"store in local var {symbol.name}",
+                typ = self.process(node.e1)
+                assert symbol.type == typ
+                if symbol.scope == "global":
+                    self.code.append(
+                        move_quad(
+                            reg=f"{symbol.name}(%rip)",
+                            intro=f"store in global var {symbol.name}",
+                        )
                     )
-                )
+                else:
+                    self.code.append(
+                        move_quad(
+                            reg=f"-{self.symbols[symbol.name].offset}(%rbp)",
+                            intro=f"store in local var {symbol.name}",
+                        )
+                    )
         elif node.typ == "if":
             etype = self.process(node.e0)
             # TODO: verify etype is double

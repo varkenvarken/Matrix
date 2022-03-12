@@ -1,0 +1,68 @@
+globals
+global printdouble     fun  :void (double)
+global printstring     fun  :void (str)
+global hello        (-1) var  :str  = None
+global myfunc          fun  :void (double,str)
+
+ 36  (program:start) e0 -> [  35] 
+ 35      (unit:) e1 -> [  34] 
+ 34        (unit:) e1 -> [  33] 
+ 33          (unit:) e0 -> [   1], e1 -> [  32] 
+  1            (initialize:str) e0 -> [   2], e1 -> [   3] 
+               4:19:str hello = "Hello"
+  2            (assign:('global', 'hello'))  
+               4:19:str hello = "Hello"
+  3                  (stringliteral:"Hello")  
+                     4:12:str hello = "Hello"
+ 32            (unit:) e0 -> [  24], e1 -> [  31] 
+ 24              (function definition:{'name': 'myfunc', 'scope': {'a': local  a           p( 0) var  :str  = None, 'b': local  b           p( 1) var  :double  = None, 'bbb': local  bbb          (-1) var  :double  = None, 'aaa': local  aaa          (-1) var  :str  = None}, 'rtype': 'void', 'ptypes': [local  a           p( 0) var  :str  = None, local  b           p( 1) var  :double  = None]}) e0 -> [  23] 
+                 6:9:fun void myfunc(str a, double b):
+ 23                  (unit:) e0 -> [   4], e1 -> [  22] 
+  4                    (initialize:double) e0 -> [   5], e1 -> [   8] 
+                       7:80:    double bbb = 3.14 + b     // we should that var refs are to initialized vars
+  5                    (assign:('local', 'bbb'))  
+                       7:80:    double bbb = 3.14 + b     // we should that var refs are to initialized vars
+  8                          (binop:{'op': 'plus'}) e0 -> [   6], e1 -> [   7] 
+                             7:22:    double bbb = 3.14 + b     // we should that var refs are to initialized vars
+  6                            (number:3.14)  
+                               7:17:    double bbb = 3.14 + b     // we should that var refs are to initialized vars
+  7                            (var reference:{'name': 'b', 'scope': 'local', 'type': 'double'})  
+                               7:24:    double bbb = 3.14 + b     // we should that var refs are to initialized vars
+ 22                    (unit:) e0 -> [   9], e1 -> [  21] 
+  9                      (initialize:str) e0 -> [  10], e1 -> [  13] 
+                         8:63:    str aaa = a + " world"    // assignment does not check type
+ 10                      (assign:('local', 'aaa'))  
+                         8:63:    str aaa = a + " world"    // assignment does not check type
+ 13                            (binop:{'op': 'plus'}) e0 -> [  11], e1 -> [  12] 
+                               8:16:    str aaa = a + " world"    // assignment does not check type
+ 11                              (var reference:{'name': 'a', 'scope': 'local', 'type': 'str'})  
+                                 8:14:    str aaa = a + " world"    // assignment does not check type
+ 12                              (stringliteral:" world")  
+                                 8:18:    str aaa = a + " world"    // assignment does not check type
+ 21                      (unit:) e0 -> [  14], e1 -> [  20] 
+ 14                        (call:{'name': 'printdouble', 'type': 'void'}) e0 -> [  16] 
+                           9:4:    printdouble(bbb)
+ 16                        (argument:) e1 -> [  15] 
+                           9:4:    printdouble(bbb)
+ 15                            (var reference:{'name': 'bbb', 'scope': 'local', 'type': 'double'})  
+                               9:16:    printdouble(bbb)
+ 20                        (unit:) e0 -> [  17] 
+ 17                          (call:{'name': 'printstring', 'type': 'void'}) e0 -> [  19] 
+                             10:4:    printstring(aaa)
+ 19                          (argument:) e1 -> [  18] 
+                             10:4:    printstring(aaa)
+ 18                              (var reference:{'name': 'aaa', 'scope': 'local', 'type': 'str'})  
+                                 10:16:    printstring(aaa)
+ 31              (unit:) e0 -> [  25] 
+ 25                (call:{'name': 'myfunc', 'type': 'void'}) e0 -> [  29] 
+                   12:6:myfunc(hello, -3.14)
+ 29                (argument:) e0 -> [  30], e1 -> [  28] 
+                   12:6:myfunc(hello, -3.14)
+ 30                (argument:) e1 -> [  27] 
+                   12:6:myfunc(hello, -3.14)
+ 27                    (unop:{'op': 'uminus'}) e0 -> [  26] 
+                       12:14:myfunc(hello, -3.14)
+ 26                      (number:3.14)  
+                         12:15:myfunc(hello, -3.14)
+ 28                      (var reference:{'name': 'hello', 'scope': 'global', 'type': 'str'})  
+                         12:7:myfunc(hello, -3.14)

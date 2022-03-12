@@ -3,13 +3,13 @@
 #include <string.h>
 #include <stdio.h>
 
-void matrixcopy(matrix_descriptor **src, matrix_descriptor **dst)
+void descriptorcopy(matrix_descriptor *src, matrix_descriptor *dst)
 {
-    long size = (*src)->size;
-    long dim = (*src)->dimensions;
-    long *shape = (*src)->shape;
-    double *srcdata = (*src)->data;
-    double *dstdata = (*dst)->data;
+    long size = src->size;
+    long dim = src->dimensions;
+    long *shape = src->shape;
+    double *srcdata = src->data;
+    double *dstdata = dst->data;
 
     for (int i = 0; i < dim; i++)
     {
@@ -17,6 +17,11 @@ void matrixcopy(matrix_descriptor **src, matrix_descriptor **dst)
     }
 
     memcpy(dstdata, srcdata, size);
+}
+
+void matrixcopy(matrix_descriptor **src, matrix_descriptor **dst)
+{
+    descriptorcopy(*src, *dst);
 }
 
 matrix_descriptor *matrix_malloc_desc(matrix_descriptor *src)
