@@ -451,7 +451,8 @@ descriptor *matrix_slice(descriptor *m, long n, slice *slices)
         {
             newdesc->stride[i] = m->stride[i];
         }
-        for (long slice_i = 0; slice_i < n; slice_i++){
+        for (long slice_i = 0; slice_i < n; slice_i++)
+        {
             newdesc->stride[slice_i] *= abs(cstep[slice_i]);
         }
 
@@ -461,11 +462,12 @@ descriptor *matrix_slice(descriptor *m, long n, slice *slices)
         long offset = 0;
         for (long slice_i = 0; slice_i < n; slice_i++)
         {
-            offset = cstart[slice_i] * newdesc->stride[slice_i];
+            offset += cstart[slice_i] * newdesc->stride[slice_i];
         }
         newdesc->offset = offset;
 
-        for (long slice_i = 0; slice_i < n; slice_i++){
+        for (long slice_i = 0; slice_i < n; slice_i++)
+        {
             if (cstep[slice_i] < 0)
             {
                 newdesc->stride[slice_i] = -newdesc->stride[slice_i];
