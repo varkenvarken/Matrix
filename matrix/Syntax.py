@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220315121916
+# Version: 20220315163933
 
 from ast import While
 from math import expm1
@@ -311,15 +311,41 @@ class SyntaxTree:
                     **node.src(),
                     e0=self.process(node.e0),
                 )
-            if node.value == "start:stop:step":  # fully specified slice
+            elif node.value == "start:stop:step":  # fully specified slice
+                e0 = self.process(node.e0)
+                e1 = self.process(node.e1)
+                e2 = self.process(node.e2)
+                if e0.typ == "default":
+                    e0 = SyntaxNode("number", 0.0, level=node.level + 1, **node.src())
+                if e1.typ == "default":
+                    e1 = SyntaxNode("number", 1e15, level=node.level + 1, **node.src())
+                if e2.typ == "default":
+                    e2 = SyntaxNode("number", 1.0, level=node.level + 1, **node.src())
+
                 return SyntaxNode(
                     "slice",
                     "",
                     level=node.level + 1,
                     **node.src(),
-                    e0=self.process(node.e0),
-                    e1=self.process(node.e1),
-                    e2=self.process(node.e2),
+                    e0=e0,
+                    e1=e1,
+                    e2=e2,
+                )
+            elif node.value == "start:stop":  # slice with default step = 1
+                e0 = self.process(node.e0)
+                e1 = self.process(node.e1)
+                if e0.typ == "default":
+                    e0 = SyntaxNode("number", 0.0, level=node.level + 1, **node.src())
+                if e1.typ == "default":
+                    e1 = SyntaxNode("number", 1e15, level=node.level + 1, **node.src())
+                return SyntaxNode(
+                    "slice",
+                    "",
+                    level=node.level + 1,
+                    **node.src(),
+                    e0=e0,
+                    e1=e1,
+                    e2=SyntaxNode("number", 1.0, level=node.level + 1, **node.src()),
                 )
             else:
                 print(f"slice format {node.value} ignored for now")
@@ -406,6 +432,13 @@ class SyntaxTree:
                 **node.src(),
                 e0=self.process(node.e0),
                 e1=self.process(node.e1),
+            )
+        elif node.token == "default":
+            return SyntaxNode(
+                "default",
+                "",
+                level=node.level + 1,
+                **node.src(),
             )
         else:
             print("unrecognized ParseNode", node)
