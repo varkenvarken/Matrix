@@ -6,3 +6,4 @@ parser.out
 standardlibrary/*.o
 standardlibrary/*.s
 standardlibrary/matrix_stdlib.so
+standardlibrary/matrix_stdlib.so
