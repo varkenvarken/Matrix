@@ -94,11 +94,13 @@ int compatible(descriptor *a, descriptor *b)
 // if src and dst point to overlapping regions the behaviour is undefined
 void descriptorcopy(descriptor *src, descriptor *dst)
 {
+#ifdef DEBUG
     puts("descriptorcopy");
     puts("src:");
     dump_descriptor(src);
     puts("dst:");
     dump_descriptor(dst);
+#endif
     if (!compatible(src, dst))
     {
         fputs("descriptor copy on incompatible types", stderr);
@@ -283,10 +285,10 @@ void matrix_fill_range(descriptor *m)
 
 void print_descriptor(descriptor *m)
 {
-
+#ifdef DEBUG
     puts("print_descriptor");
     dump_descriptor(m);
-
+#endif
     if (m->type != TYPE_DOUBLE)
     {
         fputs("print descriptor only supports double for now", stderr);
@@ -312,7 +314,7 @@ void print_descriptor(descriptor *m)
         {
         case TYPE_DOUBLE:
             d = (double *)(m->data + m->offset);
-            printf("PTR m:%p data:%p = %f\n", m, d, *d);
+            // printf("PTR m:%p data:%p = %f\n", m, d, *d);
             do
             {
                 printf("%9.4f ", *d);
@@ -334,28 +336,30 @@ void print_descriptor(descriptor *m)
 // create a new view based on a single index into the highest dimension
 descriptor *matrix_index(descriptor *m, long index)
 {
+#ifdef DEBUG
     printf("matrix_index [%ld]\n", index);
     dump_descriptor(m);
+#endif
     // print_descriptor(m);
 
     if (m->dimensions)
     {
         descriptor *newdesc = new_descriptor(m->type, m->dimensions - 1, m->shape + 1);
-        printf("INTERMEDIATE matrix_index [%ld]\n", index);
-        dump_descriptor(newdesc);
+        // printf("INTERMEDIATE matrix_index [%ld]\n", index);
+        // dump_descriptor(newdesc);
 
         for (int j = 0, i = 1; i < m->dimensions; i++, j++)
         {
-            printf("j:%d i:%d mdim:%ld\n", j, i, m->dimensions);
+            // printf("j:%d i:%d mdim:%ld\n", j, i, m->dimensions);
             newdesc->stride[j] = m->stride[i];
         }
         newdesc->base = m->base ? m->base : m->data;
         newdesc->data = m->data + m->offset;
         newdesc->offset = index * m->stride[0];
 
-        printf("RESULT matrix_index [%ld]\n", index);
-        dump_descriptor(newdesc);
-        print_descriptor(newdesc);
+        // printf("RESULT matrix_index [%ld]\n", index);
+        // dump_descriptor(newdesc);
+        // print_descriptor(newdesc);
 
         return newdesc;
     }
