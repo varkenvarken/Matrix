@@ -5,10 +5,17 @@
 #include <stdlib.h>
 #include <string.h>
 
-void descriptorcopy(matrix_descriptor *src, matrix_descriptor *dst);
-void matrixcopy(matrix_descriptor **src, matrix_descriptor **dst);
-matrix_descriptor *matrix_malloc_desc(matrix_descriptor *src);
-long matrix_data_elements(matrix_descriptor *m);
-void print_matrix(matrix_descriptor *m);
-matrix_descriptor *matrix_index(matrix_descriptor *m, long index)
+void calculate_strides(descriptor *m);
+void *step(descriptor *m, long *index);
+void descriptorcopy(descriptor *src, descriptor *dst);
+void matrixcopy(descriptor **src, descriptor **dst);
+descriptor *duplicate_descriptor(descriptor *m);
+descriptor *new_descriptor(long type, long dimensions, long shape[MAX_DIMENSIONS]);
+void print_descriptor(descriptor *m);
+descriptor *matrix_index(descriptor *m, long index);
+
+void matrix_fill(descriptor *m, void *data);
+void matrix_fill_range(descriptor *m);
+
+void dump_descriptor(descriptor *m);
 #endif

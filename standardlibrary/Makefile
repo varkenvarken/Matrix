@@ -1,8 +1,10 @@
 SOURCES = $(wildcard *.c)
 OBJECTS = $(patsubst %.c,%.o,$(SOURCES))
-CC = gcc -fPIC
-COMPILE_OPTS = -c -fPIC
-LINK_OPTS = -shared -fPIC
+INCLUDES = $(patsubst %.c,%.h,$(SOURCES))
+
+CC = gcc -fPIC -g
+COMPILE_OPTS = -c -fPIC -g
+LINK_OPTS = -shared -fPIC -g
 
 all: matrix_stdlib.so
 

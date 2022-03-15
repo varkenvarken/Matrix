@@ -1,12 +1,13 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220312164329
+# Version: 20220314170527
 
 from argparse import ArgumentError
 from collections import defaultdict
 from dataclasses import dataclass
 from functools import reduce
+from re import S
 
 
 @dataclass
@@ -337,6 +338,15 @@ def store_argument(reg, offset, name, type):
     )
 
 
+def strides(shape, size):
+    stride = []
+    s = size
+    for sh in reversed(shape):
+        stride.append(int(s))
+        s *= sh
+    return reversed(stride)
+
+
 rawdata = -1
 
 
@@ -346,13 +356,99 @@ def getDataLabel():
     return f".LRData{rawdata}"
 
 
-descriptor = -1
+descriptors = -1
 
 
 def getDescriptor():
-    global descriptor
-    descriptor += 1
-    return f".LMatDesc{descriptor}"
+    global descriptors
+    descriptors += 1
+    return f".LMatDesc{descriptors}"
+
+
+def matrix_var(v, desc):
+    return CodeChunk(
+        intro=f"global var {v.name}",
+        lines=[
+            CodeLine(opcode=f".global {v.name}"),
+            CodeLine(
+                opcode=".section",
+                operands=".rodata" if v.const and not v.constoverride else ".data",
+            ),
+            CodeLine(opcode=".p2align 3"),
+            CodeLine(opcode=".type", operands=f"{v.name}, @object"),
+            CodeLine(opcode=".size", operands=f"{v.name}, 8"),
+            CodeLine(label=v.name),
+            CodeLine(
+                opcode=".quad",
+                operands=desc,
+                comment="mat variables and constants are pointers to a data descriptor",
+            ),
+        ],
+    )
+
+
+def descriptor(shape, size, desc, data, scalar):
+    nelements = 1 if scalar else reduce(lambda x, y: int(x) * int(y), shape, 1)
+    code = CodeChunk(
+        lines=[
+            CodeLine(
+                label=desc,
+                opcode=".quad",
+                operands=f"{len(shape)}",
+                comment="number of dimensions",
+            ),
+            CodeLine(
+                opcode=".quad",
+                operands=str(size),
+                comment="size of single data element",
+            ),
+            CodeLine(
+                opcode=".quad",
+                operands=f"{nelements}",
+                comment="total number of elements",
+            ),
+            CodeLine(
+                opcode=".quad",
+                operands="0",
+                comment="flags (not used)",
+            ),
+            CodeLine(
+                opcode=".quad",
+                operands="1",
+                comment="type, always 1 (double) for now",
+            ),
+            CodeLine(
+                opcode=".quad",
+                operands=data,  # TODO: add null pointer for unspecified shape
+                comment="pointer to consequetive data. if a shape was specified or an initialize present, data will follow",
+            ),
+            CodeLine(
+                opcode=".quad",
+                operands="0",
+                comment="base (0 because this is not a view)",
+            ),
+            CodeLine(
+                opcode=".quad",
+                operands="0",
+                comment="offset (0 because this is not a view)",
+            ),
+            CodeLine(
+                opcode=".quad",
+                operands=", ".join(["0"] * 32)
+                if scalar
+                else f"{', '.join(list(map(str,map(int,shape))) + ['0']*(32-len(shape)))}",
+                comment="shape",
+            ),
+            CodeLine(
+                opcode=".quad",
+                operands=", ".join(["1"] * 32)
+                if scalar
+                else f"{', '.join(list(map(str,strides(shape,8))) + ['0']*(32-len(shape)))}",  # size always 8 (double)
+                comment="stride",
+            ),
+        ],
+    )
+    return code
 
 
 def vardef(v):
@@ -403,95 +499,27 @@ def vardef(v):
         desc = getDescriptor()
         if type(v.shape) == int:
             assert v.shape == 0
-            code = CodeChunk(
-                intro=f"global var {v.name} is a scalar (i.e not yet initialized or given a shape)",
-                lines=[
-                    CodeLine(opcode=f".global {v.name}"),
-                    CodeLine(
-                        opcode=".section",
-                        operands=".rodata"
-                        if v.const and not v.constoverride
-                        else ".data",
-                    ),
-                    CodeLine(opcode=".p2align 3"),
-                    CodeLine(opcode=".type", operands=f"{v.name}, @object"),
-                    CodeLine(opcode=".size", operands=f"{v.name}, 8"),
-                    CodeLine(label=v.name),
-                    CodeLine(
-                        opcode=".quad",
-                        operands=desc,
-                        comment="mat variables and constants are pointers to a data descriptor",
-                    ),
-                    CodeLine(
-                        label=desc,
-                        opcode=".quad",
-                        operands=f"0",
-                        comment="number of dimensions (zero, because not initialized)",
-                    ),
-                    CodeLine(
-                        opcode=".quad",
-                        operands="8",
-                        comment="size of single data element",
-                    ),
-                    CodeLine(
-                        opcode=".quad",
-                        operands="0",
-                        comment="pointer to consequetive data (zero, because not initialized)",
-                    ),
-                    CodeLine(
-                        opcode=".quad",
-                        operands=f"0",
-                        comment="shape (a single, 0 dimension, because not initialized)",
-                    ),
-                ],
+            code = matrix_var(v, desc) + descriptor(
+                [0], 8, desc, data, True
+            )  # size always 8 (double)
+            code.lines.append(
+                CodeLine(
+                    label=data,
+                    opcode=".double",
+                    operands="0.0",
+                )
             )
         else:
-            code = CodeChunk(
-                intro=f"global var {v.name} is not a scalar",
-                lines=[
-                    CodeLine(opcode=f".global {v.name}"),
-                    CodeLine(
-                        opcode=".section",
-                        operands=".rodata"
-                        if v.const and not v.constoverride
-                        else ".data",
-                    ),
-                    CodeLine(opcode=".p2align 3"),
-                    CodeLine(opcode=".type", operands=f"{v.name}, @object"),
-                    CodeLine(opcode=".size", operands=f"{v.name}, 8"),
-                    CodeLine(label=v.name),
-                    CodeLine(
-                        opcode=".quad",
-                        operands=desc,
-                        comment="mat variables and constants are pointers to a data descriptor",
-                    ),
-                    CodeLine(
-                        label=desc,
-                        opcode=".quad",
-                        operands=f"{len(v.shape)}",
-                        comment="number of dimensions",
-                    ),
-                    CodeLine(
-                        opcode=".quad",
-                        operands="8",
-                        comment="size of single data element",
-                    ),
-                    CodeLine(
-                        opcode=".quad",
-                        operands=data,  # TODO: add null pointer for unspecified shape
-                        comment="pointer to consequetive data. if a shape was specified or an initialize present, data will follow",
-                    ),
-                    CodeLine(
-                        opcode=".quad",
-                        operands=f"{', '.join(map(str,map(int,v.shape)))}",
-                        comment="shape",
-                    ),
-                    CodeLine(
-                        label=data,
-                        opcode=".dcb.d",
-                        operands=f"{reduce(lambda x, y: int(x) * int(y), v.shape, 1)} ,0.0",
-                    ),
-                ],
+            nelements = reduce(lambda x, y: int(x) * int(y), v.shape, 1)
+            code = matrix_var(v, desc) + descriptor(
+                v.shape, 8, desc, data, False
+            )  # size always 8 (double)
+            code.lines.append(
+                CodeLine(
+                    label=data,
+                    opcode=".dcb.d",
+                    operands=f"{nelements}, 0.0",
+                )
             )
     else:
         print(f"unprocessed vardef {v.name}:{v.type}")
@@ -530,39 +558,10 @@ def matLiteral(shape, values):
     data = getDataLabel()
     desc = getDescriptor()
     code = CodeChunk(
-        lines=[
-            CodeLine(
-                opcode=".section",
-                operands=".data",
-            ),
-            CodeLine(opcode=".p2align 3"),
-            CodeLine(label=name),
-            CodeLine(
-                opcode=".quad",
-                operands=desc,
-                comment="mat variables and constants are pointers to a data descriptor",
-            ),
-            CodeLine(
-                label=desc,
-                opcode=".quad",
-                operands=f"{len(shape)}",
-                comment="number of dimensions",
-            ),
-            CodeLine(
-                opcode=".quad", operands="8", comment="size of single data element"
-            ),
-            CodeLine(
-                opcode=".quad",
-                operands=data,
-                comment="pointer to consequetive data",
-            ),
-            CodeLine(
-                opcode=".quad",
-                operands=f"{', '.join(map(str,map(int,shape)))}",
-                comment="shape",
-            ),
-        ]
-    )
+        lines=[CodeLine(label=name, opcode=".quad", operands=desc)]
+    ) + descriptor(
+        shape, 8, desc, data, False
+    )  # size always 8 (double)
     code.lines.append(CodeLine(label=data))
     for val in flatten(values):
         code.lines.append(CodeLine(opcode=".double", operands=f"{val}"))
@@ -612,7 +611,7 @@ def local_matrix(info):
     return matLiteral(info["shape"], info["values"])
 
 
-def index_matrix():
+def index_matrix(alignment):
     return CodeChunk(
         intro="index a matrix",
         lines=[
@@ -624,7 +623,9 @@ def index_matrix():
                 comment="convert single double to long",
             ),
             CodeLine(opcode="popq", operands="%rdi"),
+            CodeLine(opcode="subq", operands=f"${alignment},%rsp"),
             CodeLine(opcode="call", operands="matrix_index"),
+            CodeLine(opcode="addq", operands=f"${alignment},%rsp"),
             CodeLine(opcode="push", operands="%rax"),
         ],
     )

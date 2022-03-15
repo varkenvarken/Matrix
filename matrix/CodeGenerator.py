@@ -1,7 +1,9 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220312160623
+# Version: 20220314170704
+
+from sys import stderr
 
 from .CodeSnippets import *
 from .Syntax import Scope
@@ -55,6 +57,11 @@ class CodeGenerator:
         if self.stack != 0:
             self.code.append(stack_adjust(self.stack))
             self.stack = 0
+
+    def align_stack(self):
+        if self.stack % 16:
+            return 8
+        return 0
 
     def process(self, node):
         if node is None:
@@ -201,7 +208,7 @@ class CodeGenerator:
             elif type0 == "mat":
                 if node.info["op"] == "plus":
                     self.code.append(
-                        binop_mat(binop="addmat", intro="add two matrices")
+                        binop_mat(binop="matrix_add", intro="add two matrices")
                     )
                 else:
                     print("unprocessed binop for two matrices", node.info["op"])
@@ -287,7 +294,8 @@ class CodeGenerator:
                         indexlist = indexlist.e1
                         if index_or_slice.typ == "index":
                             self.process(index_or_slice.e0)
-                            self.code.append(index_matrix())
+                            print("STACK", self.stack, file=stderr)
+                            self.code.append(index_matrix(self.align_stack()))
                             self.stack -= 8
                         else:
                             print(
@@ -358,7 +366,9 @@ class CodeGenerator:
                         indexlist = indexlist.e1
                         if index_or_slice.typ == "index":
                             self.process(index_or_slice.e0)
-                            self.code.append(index_matrix())
+                            nstack = self.align_stack()
+                            print("STACK", self.stack, file=stderr)
+                            self.code.append(index_matrix(nstack))
                             self.stack -= 8
                         else:
                             print(
