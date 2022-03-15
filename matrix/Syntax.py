@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220312151741
+# Version: 20220315121916
 
 from ast import While
 from math import expm1
@@ -310,6 +310,16 @@ class SyntaxTree:
                     level=node.level + 1,
                     **node.src(),
                     e0=self.process(node.e0),
+                )
+            if node.value == "start:stop:step":  # fully specified slice
+                return SyntaxNode(
+                    "slice",
+                    "",
+                    level=node.level + 1,
+                    **node.src(),
+                    e0=self.process(node.e0),
+                    e1=self.process(node.e1),
+                    e2=self.process(node.e2),
                 )
             else:
                 print(f"slice format {node.value} ignored for now")

@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220314170704
+# Version: 20220315154921
 
 from sys import stderr
 
@@ -289,18 +289,35 @@ class CodeGenerator:
                 if node.e0 is not None:
                     assert node.e0.typ == "indexlist"
                     indexlist = node.e0
+                    last_was_slice = 0
                     while indexlist is not None:
                         index_or_slice = indexlist.e0
                         indexlist = indexlist.e1
                         if index_or_slice.typ == "index":
+                            if last_was_slice > 0:
+                                self.code.append(
+                                    slice_matrix(self.align_stack(), last_was_slice)
+                                )
+                                self.stack -= 8 * last_was_slice * 3
+                                last_was_slice = 0
                             self.process(index_or_slice.e0)
-                            print("STACK", self.stack, file=stderr)
                             self.code.append(index_matrix(self.align_stack()))
                             self.stack -= 8
+                        elif index_or_slice.typ == "slice":
+                            self.process(index_or_slice.e0)
+                            self.process(index_or_slice.e1)
+                            self.process(index_or_slice.e2)
+                            last_was_slice += 1
                         else:
                             print(
                                 f"index type of {index_or_slice.typ} ignored on {name}"
                             )
+                    if last_was_slice > 0:
+                        self.code.append(
+                            slice_matrix(self.align_stack(), last_was_slice)
+                        )
+                        self.stack -= 8 * last_was_slice * 3
+                        last_was_slice = 0
 
             elif (
                 node.info["type"] in ("double", "str", "mat")
@@ -353,6 +370,7 @@ class CodeGenerator:
                 if symbol.scope == "global":
                     assert node.e0.e0.typ == "indexlist"
                     indexlist = node.e0.e0
+                    last_was_slice = 0
                     self.code.append(
                         load_quad(
                             intro="Assignment to index matrix",
@@ -365,15 +383,30 @@ class CodeGenerator:
                         index_or_slice = indexlist.e0
                         indexlist = indexlist.e1
                         if index_or_slice.typ == "index":
+                            if last_was_slice > 0:
+                                self.code.append(
+                                    slice_matrix(self.align_stack(), last_was_slice)
+                                )
+                                self.stack -= 8 * last_was_slice * 3
+                                last_was_slice = 0
                             self.process(index_or_slice.e0)
-                            nstack = self.align_stack()
-                            print("STACK", self.stack, file=stderr)
-                            self.code.append(index_matrix(nstack))
+                            self.code.append(index_matrix(self.align_stack()))
                             self.stack -= 8
+                        elif index_or_slice.typ == "slice":
+                            self.process(index_or_slice.e0)
+                            self.process(index_or_slice.e1)
+                            self.process(index_or_slice.e2)
+                            last_was_slice += 1
                         else:
                             print(
-                                f"index type of {index_or_slice.typ} ignored on {name}"
+                                f"index type of {index_or_slice.typ} ignored on {symbol.name}"
                             )
+                    if last_was_slice > 0:
+                        self.code.append(
+                            slice_matrix(self.align_stack(), last_was_slice)
+                        )
+                        self.stack -= 8 * last_was_slice * 3
+                        last_was_slice = 0
                     typ = self.process(node.e1)
                     assert symbol.type == typ
                     # at this point we have a matrixliteral on the top of the stack

@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220314170527
+# Version: 20220315152149
 
 from argparse import ArgumentError
 from collections import defaultdict
@@ -628,6 +628,118 @@ def index_matrix(alignment):
             CodeLine(opcode="addq", operands=f"${alignment},%rsp"),
             CodeLine(opcode="push", operands="%rax"),
         ],
+    )
+
+
+def slice_matrix(alignment, nslices):
+    malloc = [
+        CodeLine(
+            opcode="subq",
+            operands=f"${alignment},%rsp",
+            comment="make sure stack is 16 byte aligned",
+        ),
+        CodeLine(
+            opcode="mov",
+            operands=f"${nslices*3*8}, %rdi",
+            comment=f"room for {nslices} slice structs",
+        ),
+        CodeLine(opcode="call", operands="malloc"),
+        CodeLine(opcode="movq", operands="%rax, %rdx"),
+        CodeLine(opcode="addq", operands=f"${alignment},%rsp"),
+    ]
+    moveslices = []
+    offset = nslices * 3 * 8 - 8
+    for i in range(nslices - 1, -1, -1):
+        moveslices.append(
+            CodeLine(opcode="popq", operands="%rax", comment=f"slice[{i}].step")
+        )
+        moveslices.append(CodeLine(opcode="movq", operands="%rax, %xmm0"))
+        moveslices.append(
+            CodeLine(
+                opcode="cvtsd2si",
+                operands=f"%xmm0, %rax",
+                comment="convert single double to long",
+            )
+        )
+        moveslices.append(
+            CodeLine(
+                opcode="movq",
+                operands=f"%rax, {offset}(%rdx)",
+            )
+        )
+        offset -= 8
+        moveslices.append(
+            CodeLine(opcode="popq", operands="%rax", comment=f"slice[{i}].stop")
+        )
+        moveslices.append(CodeLine(opcode="movq", operands="%rax, %xmm0"))
+        moveslices.append(
+            CodeLine(
+                opcode="cvtsd2si",
+                operands=f"%xmm0, %rax",
+                comment="convert single double to long",
+            )
+        )
+        moveslices.append(
+            CodeLine(
+                opcode="movq",
+                operands=f"%rax, {offset}(%rdx)",
+            )
+        )
+        offset -= 8
+        moveslices.append(
+            CodeLine(opcode="popq", operands="%rax", comment=f"slice[{i}].start")
+        )
+        moveslices.append(CodeLine(opcode="movq", operands="%rax, %xmm0"))
+        moveslices.append(
+            CodeLine(
+                opcode="cvtsd2si",
+                operands=f"%xmm0, %rax",
+                comment="convert single double to long",
+            )
+        )
+        moveslices.append(
+            CodeLine(
+                opcode="movq",
+                operands=f"%rax, {offset}(%rdx)",
+            )
+        )
+        offset -= 8
+
+    current_alignment = (
+        alignment + nslices * 3 * 8 + 8
+    ) % 16  # include the space for the rdx we will push
+    slice = [
+        CodeLine(opcode="popq", operands="%rdi", comment="the descriptor"),
+        CodeLine(opcode="movq", operands=f"${nslices}, %rsi"),
+        CodeLine(opcode="pushq", operands="%rdx", comment="save allocated pointer"),
+        CodeLine(
+            opcode="subq",
+            operands=f"${current_alignment},%rsp",
+            comment="make sure stack is 16 byte aligned",
+        ),
+        CodeLine(opcode="call", operands="matrix_slice"),
+        CodeLine(opcode="addq", operands=f"${current_alignment},%rsp"),
+        CodeLine(
+            opcode="popq",
+            operands="%rdi",
+            comment="the pointer to the allocated slice array",
+        ),
+        CodeLine(opcode="pushq", operands="%rax"),
+    ]
+
+    free = [
+        CodeLine(
+            opcode="subq",
+            operands=f"${alignment},%rsp",
+            comment="make sure stack is 16 byte aligned",
+        ),
+        CodeLine(opcode="call", operands="free"),
+        CodeLine(opcode="addq", operands=f"${alignment},%rsp"),
+    ]
+
+    return CodeChunk(
+        intro=f"slice a matrix with {nslices} slices",
+        lines=malloc + moveslices + slice + free,
     )
 
 
