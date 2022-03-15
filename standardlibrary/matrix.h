@@ -34,4 +34,9 @@ typedef struct
      long stride[MAX_DIMENSIONS];
 } descriptor;
 
+typedef struct{
+     long start;
+     long stop;
+     long step;
+} slice;
 #endif

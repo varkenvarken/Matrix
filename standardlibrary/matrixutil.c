@@ -366,3 +366,118 @@ descriptor *matrix_index(descriptor *m, long index)
 
     return NULL;
 }
+
+// create a new view based on a slice of the highest dimension
+descriptor *matrix_slice(descriptor *m, long n, slice *slices)
+{
+    printf("INPUT matrix_slice\n");
+    for (long i = 0; i < n; i++)
+        printf("[%ld] %ld:%ld:%ld \n", i, slices[i].start, slices[i].stop, slices[i].step);
+    dump_descriptor(m);
+
+    if (m->dimensions && n > 0 && n <= m->dimensions)
+    {
+        long shape[MAX_DIMENSIONS];
+        for (int i = 0; i < m->dimensions; i++)
+        {
+            shape[i] = m->shape[i];
+        }
+        slice *s = slices;
+        long cstart[MAX_DIMENSIONS];
+        long cstop[MAX_DIMENSIONS];
+        long cstep[MAX_DIMENSIONS];
+
+        for (int slice_i = 0; slice_i < n; s++, slice_i++)
+        {
+            // normalize the slice
+            long start = s->start;
+            long stop = s->stop;
+            long step = s->step;
+            if (step == 0)
+            { // step cannot be zero
+                return NULL;
+            }
+            if (start < 0)
+            {
+                start = m->shape[0] + start; // count from the end if negative
+                if (start < 0)
+                {
+                    start = 0;
+                }
+            }
+            if (stop >= m->shape[0])
+            {
+                stop = m->shape[0]; // stop points to item one passed the end of the run
+            }
+            // printf("1 stop:%ld\n", stop);
+            if (stop < 0)
+            {
+                stop = m->shape[0] + stop; // count from the end if negative
+                if (stop < 0)
+                {
+                    stop = 0;
+                }
+            }
+            // printf("2 stop:%ld\n", stop);
+
+            long length = 0;
+            if (stop > start && step > 0)
+            {
+                length = (stop - start) / step + (stop - start) % step;
+                if (length == 0)
+                {
+                    length = 1;
+                }
+            }
+            else if (stop < start && step < 0)
+            {
+                length = (start - stop) / step + (start - stop) % step;
+                if (length == 0)
+                {
+                    length = 1;
+                }
+            }
+            cstart[slice_i] = start;
+            cstop[slice_i] = stop;
+            cstep[slice_i] = step;
+            shape[slice_i] = abs(length);
+        }
+
+        descriptor *newdesc = new_descriptor(m->type, m->dimensions, shape);
+        // printf("INTERMEDIATE matrix_index [%ld]\n", index);
+        // dump_descriptor(newdesc);
+
+        for (int i = 0; i < m->dimensions; i++)
+        {
+            newdesc->stride[i] = m->stride[i];
+        }
+        for (long slice_i = 0; slice_i < n; slice_i++){
+            newdesc->stride[slice_i] *= abs(cstep[slice_i]);
+        }
+
+        newdesc->base = m->base ? m->base : m->data;
+        newdesc->data = m->data + m->offset;
+
+        long offset = 0;
+        for (long slice_i = 0; slice_i < n; slice_i++)
+        {
+            offset = cstart[slice_i] * newdesc->stride[slice_i];
+        }
+        newdesc->offset = offset;
+
+        for (long slice_i = 0; slice_i < n; slice_i++){
+            if (cstep[slice_i] < 0)
+            {
+                newdesc->stride[slice_i] = -newdesc->stride[slice_i];
+            }
+        }
+
+        printf("RESULT matrix_slice\n");
+        dump_descriptor(newdesc);
+        // print_descriptor(newdesc);
+
+        return newdesc;
+    }
+
+    return NULL;
+}

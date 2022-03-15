@@ -12,7 +12,9 @@ void matrixcopy(descriptor **src, descriptor **dst);
 descriptor *duplicate_descriptor(descriptor *m);
 descriptor *new_descriptor(long type, long dimensions, long shape[MAX_DIMENSIONS]);
 void print_descriptor(descriptor *m);
+
 descriptor *matrix_index(descriptor *m, long index);
+descriptor *matrix_slice(descriptor *m, long n, slice *s);
 
 void matrix_fill(descriptor *m, void *data);
 void matrix_fill_range(descriptor *m);
