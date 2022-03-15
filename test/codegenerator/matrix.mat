@@ -4,10 +4,10 @@ mat b[3,3]
 
 mat c = a + a
 
-extern fun void print_matrix(mat m)
+extern fun void print_descriptor(mat m)
 
 fun mat mat_x2(mat m):
     mat m2 = m + m
     return m2
 
-print_matrix(mat_x2(c))
+print_descriptor(mat_x2(c))
