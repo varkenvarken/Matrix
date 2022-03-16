@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220316112842
+# Version: 20220316115939
 
 from sys import stderr
 
@@ -187,6 +187,10 @@ class CodeGenerator:
             if type0 != type1 or type0 is None or type1 is None:
                 if type0 == "mat" and type1 == "double":
                     self.code.append(scalar_to_mat(self.align_stack()))
+                    type1 = "mat"
+                elif type0 == "double" and type1 == "mat":
+                    self.code.append(scalar_to_mat_top1(self.align_stack()))
+                    type0 = "mat"
                 else:
                     print(f"Incompatible types {type0} {type1} in node {node}")
                     return

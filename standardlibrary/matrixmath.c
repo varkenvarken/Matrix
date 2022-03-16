@@ -4,8 +4,8 @@
 
 // TODO: check for malloc failures
 // check for compat and does broadcast
-// returns b (possibly broadcasted)
-descriptor *binop_common(char *op, descriptor *a, descriptor *b)
+// returns a, b (possibly broadcasted)
+void binop_common(char *op, descriptor *a, descriptor *b, descriptor **ab)
 {
 #ifdef DEBUG
     puts(op);
@@ -24,26 +24,42 @@ descriptor *binop_common(char *op, descriptor *a, descriptor *b)
         exit(EXIT_FAILURE);
     }
 
+    ab[0] = a;
+    ab[1] = b;
+
     switch (broadcastable(a, b))
     {
     case -1:
-        fprintf(stderr, "matrix %s: right hand matrix cannot be broadcast", op);
-        exit(EXIT_FAILURE);
+        if (broadcastable(b, a) < 0) // we don have to check for 0 because that would have been caught by the first test
+            exit(EXIT_FAILURE);
+        else
+            ab[0] = broadcast(b, a);
+        break;
     case 0: // no need to broadcast
         break;
     default: // create a broadcast descriptor from b that matches a
-        b = broadcast(a, b);
+        ab[1] = broadcast(a, b);
         break;
     }
-
-    return b;
 }
 
 descriptor *matrix_add(descriptor *a, descriptor *b)
 {
+    // puts("in a");
+    // dump_descriptor(a);
+    // puts("in b");
+    // dump_descriptor(b);
+
+    descriptor *ab[2];
+    binop_common("add", a, b, ab);
+    a = ab[0];
+    b = ab[1];
     descriptor *c = duplicate_descriptor(a);
 
-    b = binop_common("add", a, b);
+    // puts("out a");
+    // dump_descriptor(a);
+    // puts("out b");
+    // dump_descriptor(b);
 
     if (a->dimensions == 0)
     { // a scalar
@@ -73,9 +89,11 @@ descriptor *matrix_add(descriptor *a, descriptor *b)
 
 descriptor *matrix_subtract(descriptor *a, descriptor *b)
 {
+    descriptor *ab[2];
+    binop_common("add", a, b, ab);
+    a = ab[0];
+    b = ab[1];
     descriptor *c = duplicate_descriptor(a);
-
-    b = binop_common("subtract", a, b);
 
     if (a->dimensions == 0)
     { // a scalar
