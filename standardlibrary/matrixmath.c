@@ -8,14 +8,13 @@ descriptor *matrix_add(descriptor *a, descriptor *b)
 {
     descriptor *c = duplicate_descriptor(a);
 
-#ifdef DEBUG
     puts("matrix_add\na:");
     dump_descriptor(a);
     puts("b:");
     dump_descriptor(b);
     puts("c:");
     dump_descriptor(c);
-#endif
+
     switch (a->type)
     {
     case TYPE_DOUBLE:

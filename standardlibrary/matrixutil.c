@@ -576,3 +576,10 @@ int broadcastable(descriptor *a, descriptor *b)
     printf("broadcastable n:%i\n", nbroadcasts);
     return nbroadcasts;
 }
+
+descriptor *scalar_to_mat(double d)
+{
+    descriptor *m = new_descriptor(TYPE_DOUBLE, 0, NULL);
+    *((double *)(m->data)) = d;
+    return m;
+}

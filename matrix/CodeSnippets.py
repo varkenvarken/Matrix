@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220315152149
+# Version: 20220316100418
 
 from argparse import ArgumentError
 from collections import defaultdict
@@ -778,3 +778,21 @@ def jump(label):
 
 def labelCode(label):
     return CodeChunk(lines=[CodeLine(label=label)])
+
+
+def scalar_to_mat(alignment):
+    return CodeChunk(
+        intro="convert double to 0 dim matrix",
+        lines=[
+            CodeLine(opcode="popq", operands="%rax"),
+            CodeLine(
+                opcode="subq",
+                operands=f"${alignment+8},%rsp",
+                comment="make sure stack is 16 byte aligned",
+            ),
+            CodeLine(opcode="movq", operands="%rax, %xmm0"),
+            CodeLine(opcode="call", operands="scalar_to_mat"),
+            CodeLine(opcode="addq", operands=f"${alignment+8},%rsp"),
+            CodeLine(opcode="pushq", operands="%rax"),
+        ],
+    )
