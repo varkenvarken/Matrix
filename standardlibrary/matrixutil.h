@@ -15,6 +15,8 @@ void print_descriptor(descriptor *m);
 
 descriptor *matrix_index(descriptor *m, long index);
 descriptor *matrix_slice(descriptor *m, long n, slice *s);
+descriptor *broadcast(descriptor *a, descriptor *b);
+int broadcastable(descriptor *a, descriptor *b);
 
 void matrix_fill(descriptor *m, void *data);
 void matrix_fill_range(descriptor *m);

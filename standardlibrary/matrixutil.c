@@ -483,3 +483,96 @@ descriptor *matrix_slice(descriptor *m, long n, slice *slices)
 
     return NULL;
 }
+
+// for now we only broadcast b->a
+descriptor *broadcast(descriptor *a, descriptor *b)
+{
+    puts("broadcast a");
+    dump_descriptor(a);
+    puts("broadcast b");
+    dump_descriptor(b);
+
+    if (a->type != b->type)
+    {
+        fputs("broadcasting of unequal types is not supported", stderr);
+        return NULL;
+    }
+    if (b->dimensions > a->dimensions)
+    {
+        fputs("broadcasting of a larger to a smaller matrix is not supported", stderr);
+        return NULL;
+    }
+    long shape[MAX_DIMENSIONS];
+    int delta = (int)(a->dimensions - b->dimensions);
+    for (int i = 0; i < a->dimensions; i++)
+    {
+        shape[i] = i < delta ? 1 : b->shape[i - delta];
+    }
+    descriptor *c = new_empty_descriptor(a->type, a->dimensions, shape);
+    c->data = b->data;
+    c->offset = b->offset;
+    c->base = b->base == NULL ? b->data : b->base;
+
+    for (int i = 0; i < a->dimensions; i++)
+    {
+        printf("dim_a[%d] = %ld, dim_b[%d] = %ld\n", i, a->shape[i], i, c->shape[i]);
+    }
+
+    for (int i = 0; i < a->dimensions; i++)
+    {
+        if (a->shape[i] != c->shape[i])
+        {
+            if (c->shape[i] == 1)
+            {
+                c->shape[i] = a->shape[i];
+                c->stride[i] = 0;
+            }
+            else
+            {
+                fprintf(stderr, "cannot broadcast unequal dimensions %d\n", i);
+                return NULL;
+            }
+        }
+    }
+
+    puts("broadcast c");
+    dump_descriptor(c);
+    puts("");
+
+    return c;
+}
+
+// -1 : cannot be broadcast
+//  0 : no broadcast needed
+// +n : number of dimensions needed to be broadcast
+int broadcastable(descriptor *a, descriptor *b)
+{
+    if (a->type != b->type)
+    {
+        return -1;
+    }
+    if (b->dimensions > a->dimensions)
+    {
+        return -1;
+    }
+    long shape[MAX_DIMENSIONS];
+    int delta = (int)(a->dimensions - b->dimensions);
+    int nbroadcasts = delta;
+    for (int i = 0, j = delta; i < b->dimensions; i++, j++)
+    {
+        printf("broadcastable %i a:%ld, b:%ld\n", i, a->shape[j], b->shape[i]);
+        if (a->shape[j] != b->shape[i])
+        {
+            if (a->shape[j] != 1)
+            {
+                return -1;
+            }
+            if (b->shape[j] == 1)
+            {
+                nbroadcasts++;
+            }
+        }
+    }
+    printf("broadcastable n:%i\n", nbroadcasts);
+    return nbroadcasts;
+}

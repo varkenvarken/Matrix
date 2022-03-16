@@ -24,6 +24,19 @@ descriptor *matrix_add(descriptor *a, descriptor *b)
         fputs("matrix addition only for doubles for now", stderr);
         exit(EXIT_FAILURE);
     }
+
+    switch (broadcastable(a, b))
+    {
+    case -1:
+        fputs("matrix addition cannot be broadcast", stderr);
+        exit(EXIT_FAILURE);
+    case 0: // no need to broadcast
+        break;
+    default: // create a broadcast descriptor from b that matches a
+        b = broadcast(a, b);
+        break;
+    }
+
     if (a->dimensions == 0)
     { // a scalar
         *((double *)(c->data + c->offset)) = *((double *)(a->data + a->offset)) + *((double *)(b->data + b->offset));
