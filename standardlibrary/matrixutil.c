@@ -583,3 +583,20 @@ descriptor *scalar_to_mat(double d)
     *((double *)(m->data)) = d;
     return m;
 }
+
+int is_contiguous(descriptor *m)
+{
+    long refstride = m->size;
+    if (m->dimensions == 0) // a scalar is always contiguous
+        return 1;
+    for (long i = m->dimensions - 1; i >= 0; i--)
+    {
+        // printf("dim: %ld  stride:%ld refstride:%ld\n", i, m->stride[i], refstride);
+        if (m->stride[i] != refstride)
+        { // strides bigger (or smaller, i.e. 0 when broadcast), mean non-contiguous
+            return 0;
+        }
+        refstride *= m->shape[i];
+    }
+    return 1;
+}

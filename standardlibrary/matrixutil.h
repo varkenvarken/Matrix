@@ -22,4 +22,7 @@ void matrix_fill(descriptor *m, void *data);
 void matrix_fill_range(descriptor *m);
 
 void dump_descriptor(descriptor *m);
+
+int is_contiguous(descriptor *m);
+
 #endif
