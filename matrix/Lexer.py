@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220311135636
+# Version: 20220316104902
 
 from re import compile, match, search
 
@@ -163,67 +163,76 @@ class MatrixLexer(Lexer):
         indent = [""]
         level = 0
         holdback = None
+        inside_list = 0
+
         for lineno, line in enumerate(stream):
 
-            if MatrixLexer.is_empty(line):
-                tok = MatrixToken()
-                tok.type = "NEWLINE"
-                tok.value = "\n"
-                tok.lineno = lineno
-                tok.index = 0
-                tok.line = line
-                tok.filename = filename
-                holdback = tok
-                continue
-
-            space = leading_space(line)
-            lineno -= 1
-            try:
-                filename = stream.filename()
-                lineno = stream.filelineno()
-            except AttributeError as e:
-                print(e)
-                pass
-
-            if len(space) == 0:
-                while level > 0:
-                    level -= 1
-                    indent.pop()
+            if inside_list == 0:  # no indent/dedent processing inside lists
+                if MatrixLexer.is_empty(line):
                     tok = MatrixToken()
-                    tok.type = "DEDENT"
-                    tok.value = ""
+                    tok.type = "NEWLINE"
+                    tok.value = "\n"
                     tok.lineno = lineno
                     tok.index = 0
                     tok.line = line
                     tok.filename = filename
-                    yield tok
-            elif space != indent[-1]:
-                tok = MatrixToken()
-                tok.value = space
-                tok.lineno = lineno
-                tok.index = 0
-                if len(space) > len(indent[-1]):
-                    tok.type = "INDENT"
-                    level += 1
-                    indent.append(space)
-                elif len(space) < len(indent[-1]):
-                    tok.type = "DEDENT"
-                    level -= 1
-                    indent.pop()
-                else:  # same length but mixed spaces and tabes
-                    tok.type = "ERROR"
-                tok.line = line
-                tok.filename = filename
-                yield tok
+                    holdback = tok
+                    continue
 
-            if holdback is not None:
-                yield holdback
-                holdback = None
+                space = leading_space(line)
+                lineno -= 1
+                try:
+                    filename = stream.filename()
+                    lineno = stream.filelineno()
+                except AttributeError as e:
+                    print(e)
+                    pass
+
+                if len(space) == 0:
+                    while level > 0:
+                        level -= 1
+                        indent.pop()
+                        tok = MatrixToken()
+                        tok.type = "DEDENT"
+                        tok.value = ""
+                        tok.lineno = lineno
+                        tok.index = 0
+                        tok.line = line
+                        tok.filename = filename
+                        yield tok
+                elif space != indent[-1]:
+                    tok = MatrixToken()
+                    tok.value = space
+                    tok.lineno = lineno
+                    tok.index = 0
+                    if len(space) > len(indent[-1]):
+                        tok.type = "INDENT"
+                        level += 1
+                        indent.append(space)
+                    elif len(space) < len(indent[-1]):
+                        tok.type = "DEDENT"
+                        level -= 1
+                        indent.pop()
+                    else:  # same length but mixed spaces and tabes
+                        tok.type = "ERROR"
+                    tok.line = line
+                    tok.filename = filename
+                    yield tok
+
+                if holdback is not None:
+                    yield holdback
+                    holdback = None
 
             for token in self.tokenize(line, lineno=lineno):
                 tok = MatrixToken.fromToken(token)
                 tok.line = line
                 tok.filename = filename
+                if token.type == "LBRACKET":
+                    inside_list += 1
+                elif token.type == "RBRACKET":
+                    inside_list -= 1
+                if inside_list > 0 and token.type == "NEWLINE":
+                    continue
                 yield tok
 
         # return any number of missing DEDENT tokens at the end of the stream
