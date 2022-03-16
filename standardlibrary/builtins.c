@@ -27,10 +27,10 @@ double dimensions(descriptor *m)
 
 descriptor *reshape(descriptor *m, descriptor *shape)
 {
-    //puts("reshape m");
-    //dump_descriptor(m);
-    //puts("to shape");
-    //dump_descriptor(shape);
+    // puts("reshape m");
+    // dump_descriptor(m);
+    // puts("to shape");
+    // dump_descriptor(shape);
 
     if (shape->dimensions != 1)
     {
@@ -63,5 +63,63 @@ descriptor *reshape(descriptor *m, descriptor *shape)
         m->shape[i] = (long)(((double *)(shape->data + shape->offset))[i]);
     }
     calculate_strides(m);
+    return m;
+}
+
+descriptor *fill(descriptor *m, double d)
+{
+    matrix_fill(m, &d);
+    return m;
+}
+
+descriptor *range(descriptor *m)
+{
+    matrix_fill_range(m);
+    return m;
+}
+
+// fill a 'square' matrix with the identity.
+// square = size of all dimensions is the same
+descriptor *eye(descriptor *m)
+{
+    for (long i = 0; i < m->dimensions; i++)
+    {
+        if (m->shape[i] != m->shape[0])
+        {
+            fprintf(stderr, "eye matrix is not a regular hypercube\n");
+            exit(EXIT_FAILURE);
+        }
+    }
+    if (m->dimensions == 0)
+    {
+        *((double *)(m->data + m->offset)) = 1.0;
+    }
+    else
+    {
+        double zero = 0.0;
+        matrix_fill(m, &zero);
+        long index[MAX_DIMENSIONS];
+        for (int i = 0; i < MAX_DIMENSIONS; i++)
+        {
+            index[i] = 0;
+        }
+        void *data = m->data + m->offset;
+        // dump_descriptor(m);
+        for (long i = 0; i < m->shape[0]; i++)
+        {
+            long offset = 0;
+            for (long j = 0; j < m->dimensions; j++)
+            {
+                offset += index[j] * m->stride[j];
+            }
+            for (long k = 0; k < m->dimensions; k++)
+            {
+                // printf("%ld ", index[k]);
+                index[k]++;
+            }
+            // printf("\n");
+            *((double *)(data + offset)) = 1.0;
+        }
+    }
     return m;
 }

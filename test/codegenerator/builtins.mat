@@ -2,6 +2,9 @@ extern fun mat copy(mat m)
 extern fun mat shape(mat m)
 extern fun mat reshape(mat m, mat shape)
 extern fun double dimensions(mat m)
+extern fun mat fill(mat m, double d)
+extern fun mat range(mat m)
+extern fun mat eye(mat m)
 
 extern fun void print_descriptor(mat m)
 extern fun void printdouble(double d)
@@ -22,3 +25,11 @@ print_descriptor(shape(a))
 printdouble(dimensions(a))
 
 print_descriptor(reshape(a,[6,2]))
+
+mat c[3,3]
+
+print_descriptor(fill(c, 3.14))
+
+print_descriptor(range(c))
+
+print_descriptor(eye(c))
