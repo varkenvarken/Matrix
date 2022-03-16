@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220316114833
+# Version: 20220316163344
 
 from argparse import ArgumentError
 from collections import defaultdict
@@ -193,8 +193,8 @@ def unop_double_negate(intro=None, linecomment=None):
 
 
 def binop_double(binop, intro=None, linecomment=None):
-    pop0 = pop_quad(reg="%xmm0", intro=intro)
-    pop1 = pop_quad(reg="%xmm1")
+    pop0 = pop_quad(reg="%xmm1", intro=intro)
+    pop1 = pop_quad(reg="%xmm0")
     binop = CodeChunk(
         lines=[
             CodeLine(opcode=binop, operands=f"%xmm1, %xmm0", comment=linecomment),
