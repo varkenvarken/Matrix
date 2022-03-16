@@ -370,10 +370,10 @@ descriptor *matrix_index(descriptor *m, long index)
 // create a new view based on a slice of the highest dimension
 descriptor *matrix_slice(descriptor *m, long n, slice *slices)
 {
-    printf("INPUT matrix_slice\n");
-    for (long i = 0; i < n; i++)
-        printf("[%ld] %ld:%ld:%ld \n", i, slices[i].start, slices[i].stop, slices[i].step);
-    dump_descriptor(m);
+    // printf("INPUT matrix_slice\n");
+    // for (long i = 0; i < n; i++)
+    //     printf("[%ld] %ld:%ld:%ld \n", i, slices[i].start, slices[i].stop, slices[i].step);
+    // dump_descriptor(m);
 
     if (m->dimensions && n > 0 && n <= m->dimensions)
     {
@@ -474,9 +474,9 @@ descriptor *matrix_slice(descriptor *m, long n, slice *slices)
             }
         }
 
-        printf("RESULT matrix_slice\n");
-        dump_descriptor(newdesc);
-        // print_descriptor(newdesc);
+        // printf("RESULT matrix_slice\n");
+        // dump_descriptor(newdesc);
+        //  print_descriptor(newdesc);
 
         return newdesc;
     }
@@ -487,10 +487,10 @@ descriptor *matrix_slice(descriptor *m, long n, slice *slices)
 // for now we only broadcast b->a
 descriptor *broadcast(descriptor *a, descriptor *b)
 {
-    puts("broadcast a");
-    dump_descriptor(a);
-    puts("broadcast b");
-    dump_descriptor(b);
+    // puts("broadcast a");
+    // dump_descriptor(a);
+    // puts("broadcast b");
+    // dump_descriptor(b);
 
     if (a->type != b->type)
     {
@@ -513,10 +513,10 @@ descriptor *broadcast(descriptor *a, descriptor *b)
     c->offset = b->offset;
     c->base = b->base == NULL ? b->data : b->base;
 
-    for (int i = 0; i < a->dimensions; i++)
-    {
-        printf("dim_a[%d] = %ld, dim_b[%d] = %ld\n", i, a->shape[i], i, c->shape[i]);
-    }
+    // for (int i = 0; i < a->dimensions; i++)
+    //{
+    //     printf("dim_a[%d] = %ld, dim_b[%d] = %ld\n", i, a->shape[i], i, c->shape[i]);
+    // }
 
     for (int i = 0; i < a->dimensions; i++)
     {
@@ -535,9 +535,9 @@ descriptor *broadcast(descriptor *a, descriptor *b)
         }
     }
 
-    puts("broadcast c");
-    dump_descriptor(c);
-    puts("");
+    // puts("broadcast c");
+    // dump_descriptor(c);
+    // puts("");
 
     return c;
 }
@@ -560,7 +560,7 @@ int broadcastable(descriptor *a, descriptor *b)
     int nbroadcasts = delta;
     for (int i = 0, j = delta; i < b->dimensions; i++, j++)
     {
-        printf("broadcastable %i a:%ld, b:%ld\n", i, a->shape[j], b->shape[i]);
+        // printf("broadcastable %i a:%ld, b:%ld\n", i, a->shape[j], b->shape[i]);
         if (a->shape[j] != b->shape[i])
         {
             if (a->shape[j] != 1)
@@ -573,7 +573,7 @@ int broadcastable(descriptor *a, descriptor *b)
             }
         }
     }
-    printf("broadcastable n:%i\n", nbroadcasts);
+    // printf("broadcastable n:%i\n", nbroadcasts);
     return nbroadcasts;
 }
 
