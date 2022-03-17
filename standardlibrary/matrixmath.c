@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "matrix.h"
 #include "matrixutil.h"
+#include "arithmatic.h"
 
 // TODO: check for malloc failures
 // check for compat and does broadcast
@@ -44,6 +45,60 @@ void binop_common(char *op, descriptor *a, descriptor *b, descriptor **ab)
 }
 
 descriptor *matrix_add(descriptor *a, descriptor *b)
+{
+    // puts("in a");
+    // dump_descriptor(a);
+    // puts("in b");
+    // dump_descriptor(b);
+
+    descriptor *ab[2];
+    binop_common("add", a, b, ab);
+    a = ab[0];
+    b = ab[1];
+    descriptor *c = duplicate_descriptor(a);
+
+    // puts("out a");
+    // dump_descriptor(a);
+    // puts("out b");
+    // dump_descriptor(b);
+    // puts("out c");
+    // dump_descriptor(c);
+
+    if (a->dimensions == 0)
+    { // a scalar
+        *((double *)(c->data + c->offset)) = *((double *)(a->data + a->offset)) + *((double *)(b->data + b->offset));
+    }
+    else
+    {
+        long a_index[MAX_DIMENSIONS];
+        long b_index[MAX_DIMENSIONS];
+        long c_index[MAX_DIMENSIONS];
+        for (int i = 0; i < a->dimensions; i++)
+            a_index[i] = b_index[i] = c_index[i] = 0;
+        void *ad = a->data + a->offset;
+        void *bd = b->data + b->offset;
+        void *cd = c->data + c->offset;
+        switch (a->dimensions)
+        {
+        case 1:
+            break;
+        case 2:
+            for (long i = 0; i < a->shape[0]; i++)
+            {
+                // printf("%ld %p %p %p\n", i, ad, bd, cd);
+                _add_double(cd, ad, bd, c->stride[1], a->stride[1], b->stride[1], a->shape[1]);
+                //_add_double_contiguous(cd, ad, bd, a->shape[1]);
+                ad += a->stride[0];
+                bd += b->stride[0];
+                cd += c->stride[0];
+            }
+            break;
+        }
+    }
+    return c;
+}
+
+descriptor *matrix_add_old(descriptor *a, descriptor *b)
 {
     // puts("in a");
     // dump_descriptor(a);

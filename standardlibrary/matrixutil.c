@@ -38,44 +38,36 @@ void dump_descriptor(descriptor *m)
 // return NULL if there is no next datapoint
 void *step(descriptor *m, long *index)
 {
-    if (m->type == TYPE_DOUBLE)
+    if (m->dimensions == 0)
     {
-        if (m->dimensions == 0)
+        return NULL;
+    }
+    // increment indices
+    for (long d = m->dimensions - 1; d >= 0; d--)
+    {
+        // if there is no rollover, no other indices need to be incremented
+        index[d]++;
+        if (index[d] >= m->shape[d])
         {
-            return NULL;
-        }
-        // increment indices
-        for (long d = m->dimensions - 1; d >= 0; d--)
-        {
-            // if there is no rollover, no other indices need to be incremented
-            index[d]++;
-            if (index[d] >= m->shape[d])
+            index[d] = 0;
+            if (d == 0)
             {
-                index[d] = 0;
-                if (d == 0)
-                {
-                    return NULL; // if the highest index is rolled over we're done
-                }
-            }
-            else
-            {
-                break;
+                return NULL; // if the highest index is rolled over we're done
             }
         }
-
-        long strideoffset = 0;
-        for (long d = m->dimensions - 1; d >= 0; d--)
+        else
         {
-            strideoffset += index[d] * m->stride[d];
+            break;
         }
+    }
 
-        return (void *)(m->data + m->offset + strideoffset);
-    }
-    else
+    long strideoffset = 0;
+    for (long d = m->dimensions - 1; d >= 0; d--)
     {
-        fputs("index only supports doubles for now", stderr);
-        exit(EXIT_FAILURE);
+        strideoffset += index[d] * m->stride[d];
     }
+
+    return (void *)(m->data + m->offset + strideoffset);
 }
 
 // return true if types and total number of elements are the same
