@@ -9,4 +9,6 @@ descriptor *matrix_multiply(descriptor *, descriptor *);
 descriptor *matrix_divide(descriptor *a, descriptor *b);
 descriptor *matrix_modulo(descriptor *a, descriptor *b);
 
+descriptor *matrix_negate(descriptor *a);
+
 #endif

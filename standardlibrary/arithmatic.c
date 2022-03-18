@@ -63,3 +63,13 @@ void _modulo_double(void *c, void *a, void *b, long stride_c, long stride_a, lon
         a += stride_a;
     }
 }
+
+void _negate_double(void *c, void *a, long stride_c, long stride_a, long n)
+{
+    while (n--)
+    {
+        *(double *)c = -(*(double *)a);
+        c += stride_c;
+        a += stride_a;
+    }
+}

@@ -2,7 +2,7 @@ SOURCES = $(wildcard *.c)
 OBJECTS = $(patsubst %.c,%.o,$(SOURCES))
 CC = gcc -fPIC -g
 COMPILE_OPTS = -c -fPIC
-LINK_OPTS = -g -lm ../../standardlibrary/matrix_stdlib.so
+LINK_OPTS = -g ../../standardlibrary/matrix_stdlib.so -lm
 
 PROGS=$(patsubst %.c,%.out,$(SOURCES))
 CMPS=$(patsubst %.c,%.cmp,$(SOURCES))

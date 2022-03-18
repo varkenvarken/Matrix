@@ -59,6 +59,27 @@ void test_divide()
     matrix_fill(b, &value_b);
     print_descriptor(matrix_divide(a, b));
 }
+void test_modulo()
+{
+    long shape[2] = {3, 3};
+    double value_a = 3.0;
+    descriptor *a = new_descriptor(TYPE_DOUBLE, 2, shape);
+    matrix_fill(a, &value_a);
+    double value_b = 2.0;
+    descriptor *b = new_descriptor(TYPE_DOUBLE, 2, shape);
+    matrix_fill(b, &value_b);
+    print_descriptor(matrix_modulo(a, b));
+}
+
+void test_negate()
+{
+    long shape[2] = {3, 3};
+    double value_a = 3.0;
+    descriptor *a = new_descriptor(TYPE_DOUBLE, 2, shape);
+    matrix_fill(a, &value_a);
+    print_descriptor(matrix_negate(a));
+}
+
 int main(int argc, char **argv)
 {
     test_create();
@@ -66,5 +87,7 @@ int main(int argc, char **argv)
     test_subtract();
     test_multiply();
     test_divide();
+    test_modulo();
+    test_negate();
     return 0;
 }

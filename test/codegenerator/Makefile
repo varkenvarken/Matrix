@@ -2,7 +2,7 @@ PYTHON=python
 MODULE=matrix
 CMD=$(PYTHON) -m $(MODULE)
 GCC=gcc
-LINK_OPTS=-lm ../../standardlibrary/matrix_stdlib.so
+LINK_OPTS=../../standardlibrary/matrix_stdlib.so -lm
 
 export PYTHONPATH := ../..
 

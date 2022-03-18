@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220318145822
+# Version: 20220318154512
 
 from argparse import ArgumentError
 from collections import defaultdict
@@ -244,6 +244,17 @@ def binop_mat(binop, intro=None, linecomment=None):
     )
     push = push_quad(reg="%rax")
     return pop0 + pop1 + binop + push
+
+
+def unop_mat(unop, intro=None, linecomment=None):
+    pop1 = pop_quad(reg="%rdi")
+    unop = CodeChunk(
+        lines=[
+            CodeLine(opcode="call", operands=f"{unop}", comment=linecomment),
+        ],
+    )
+    push = push_quad(reg="%rax")
+    return pop1 + unop + push
 
 
 local_doubles = -1

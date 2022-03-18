@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220318145346
+# Version: 20220318154604
 
 from sys import stderr
 
@@ -179,6 +179,11 @@ class CodeGenerator:
             if type0 == "double" and node.info["op"] == "uminus":
                 self.code.append(unop_double_negate())
                 return type0
+            elif type0 == "mat":
+                if node.info["op"] == "uminus":
+                    self.code.append(
+                        unop_mat(unop="matrix_negate", intro="negate a matrix")
+                    )
             else:
                 print(f"unprocessed unop {node.info['op']} for type {type0}")
         elif node.typ == "binop":
@@ -212,9 +217,7 @@ class CodeGenerator:
                         binop_double(binop="divsd", intro="subtract two doubles")
                     )
                 elif node.info["op"] == "%":
-                    self.code.append(
-                        modulo_double()
-                    )
+                    self.code.append(modulo_double())
                 else:
                     print("unprocessed binop for two doubles", node.info["op"])
                 self.stack -= 8
