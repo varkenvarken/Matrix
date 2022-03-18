@@ -1,0 +1,5 @@
+mat i
+
+for i in range(0,10,1):
+    printdouble(0 + i)
+

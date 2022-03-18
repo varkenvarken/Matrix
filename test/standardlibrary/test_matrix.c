@@ -37,10 +37,34 @@ void test_subtract()
     print_descriptor(matrix_subtract(a, b));
 }
 
+void test_multiply()
+{
+    long shape[2] = {3, 3};
+    double value_a = 2.0;
+    descriptor *a = new_descriptor(TYPE_DOUBLE, 2, shape);
+    matrix_fill(a, &value_a);
+    double value_b = 2.0;
+    descriptor *b = new_descriptor(TYPE_DOUBLE, 2, shape);
+    matrix_fill(b, &value_b);
+    print_descriptor(matrix_multiply(a, b));
+}
+void test_divide()
+{
+    long shape[2] = {3, 3};
+    double value_a = 2.0;
+    descriptor *a = new_descriptor(TYPE_DOUBLE, 2, shape);
+    matrix_fill(a, &value_a);
+    double value_b = 2.0;
+    descriptor *b = new_descriptor(TYPE_DOUBLE, 2, shape);
+    matrix_fill(b, &value_b);
+    print_descriptor(matrix_divide(a, b));
+}
 int main(int argc, char **argv)
 {
     test_create();
     test_add();
     test_subtract();
+    test_multiply();
+    test_divide();
     return 0;
 }

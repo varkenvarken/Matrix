@@ -7,7 +7,10 @@ mat c = a + a
 extern fun void print_descriptor(mat m)
 
 fun mat mat_x2(mat m):
+    print_descriptor(m)
     mat m2 = m + m
     return m2
 
+print_descriptor(a)
+print_descriptor(c)
 print_descriptor(mat_x2(c))

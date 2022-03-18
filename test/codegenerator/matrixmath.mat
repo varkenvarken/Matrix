@@ -9,3 +9,7 @@ mat b = [2,2,2]
 print_descriptor(a+b)
 
 print_descriptor(a-b)
+
+print_descriptor(a*b)
+
+print_descriptor(a/b)

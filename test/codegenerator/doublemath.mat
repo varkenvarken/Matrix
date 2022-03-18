@@ -1,0 +1,4 @@
+printdouble(1+2)
+printdouble(1-2)
+printdouble(2*2)
+printdouble(2/2)
