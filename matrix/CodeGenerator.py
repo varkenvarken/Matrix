@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220318134440
+# Version: 20220318145346
 
 from sys import stderr
 
@@ -211,6 +211,10 @@ class CodeGenerator:
                     self.code.append(
                         binop_double(binop="divsd", intro="subtract two doubles")
                     )
+                elif node.info["op"] == "%":
+                    self.code.append(
+                        modulo_double()
+                    )
                 else:
                     print("unprocessed binop for two doubles", node.info["op"])
                 self.stack -= 8
@@ -244,6 +248,10 @@ class CodeGenerator:
                 elif node.info["op"] == "/":
                     self.code.append(
                         binop_mat(binop="matrix_divide", intro="divide two matrices")
+                    )
+                elif node.info["op"] == "%":
+                    self.code.append(
+                        binop_mat(binop="matrix_modulo", intro="divide two matrices")
                     )
                 else:
                     print("unprocessed binop for two matrices", node.info["op"])

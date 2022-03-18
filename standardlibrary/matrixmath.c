@@ -128,6 +128,8 @@ RECURSIVE_BINOP(multiply)
 
 RECURSIVE_BINOP(divide)
 
+RECURSIVE_BINOP(modulo)
+
 MATRIX_BINOP(add)
 
 MATRIX_BINOP(subtract)
@@ -135,3 +137,5 @@ MATRIX_BINOP(subtract)
 MATRIX_BINOP(multiply)
 
 MATRIX_BINOP(divide)
+
+MATRIX_BINOP(modulo)
