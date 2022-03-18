@@ -3,6 +3,8 @@
 #include "matrixutil.h"
 #include "arithmatic.h"
 
+void _recursive_add(void *cd, void *ad, void *bd, long *cstride, long *astride, long *bstride, long *shape, long dim);
+
 // TODO: check for malloc failures
 // check for compat and does broadcast
 // returns a, b (possibly broadcasted)
@@ -63,6 +65,7 @@ descriptor *matrix_add(descriptor *a, descriptor *b)
     // dump_descriptor(b);
     // puts("out c");
     // dump_descriptor(c);
+    // puts("");
 
     if (a->dimensions == 0)
     { // a scalar
@@ -81,13 +84,21 @@ descriptor *matrix_add(descriptor *a, descriptor *b)
         switch (a->dimensions)
         {
         case 1:
+            _add_double(cd, ad, bd, c->stride[0], a->stride[0], b->stride[0], a->shape[0]);
             break;
         case 2:
             for (long i = 0; i < a->shape[0]; i++)
             {
-                // printf("%ld %p %p %p\n", i, ad, bd, cd);
                 _add_double(cd, ad, bd, c->stride[1], a->stride[1], b->stride[1], a->shape[1]);
-                //_add_double_contiguous(cd, ad, bd, a->shape[1]);
+                ad += a->stride[0];
+                bd += b->stride[0];
+                cd += c->stride[0];
+            }
+            break;
+        default:
+            for (long i = 0; i < a->shape[0]; i++)
+            {
+                _recursive_add(cd, ad, bd, c->stride + 1, a->stride + 1, b->stride + 1, a->shape + 1, a->dimensions - 1);
                 ad += a->stride[0];
                 bd += b->stride[0];
                 cd += c->stride[0];
@@ -96,6 +107,31 @@ descriptor *matrix_add(descriptor *a, descriptor *b)
         }
     }
     return c;
+}
+
+void _recursive_add(void *cd, void *ad, void *bd, long *cstride, long *astride, long *bstride, long *shape, long dim)
+{
+    // printf("recursive add: %p %p %p    %ld\n", cd, ad, bd, dim);
+    if (dim == 2)
+    {
+        for (long i = 0; i < shape[0]; i++)
+        {
+            _add_double(cd, ad, bd, cstride[1], astride[1], bstride[1], shape[1]);
+            ad += astride[0];
+            bd += bstride[0];
+            cd += cstride[0];
+        }
+    }
+    else
+    {
+        for (long i = 0; i < shape[0]; i++)
+        {
+            _recursive_add(cd, ad, bd, cstride + 1, astride + 1, bstride + 1, shape + 1, dim - 1);
+            ad += astride[0];
+            bd += bstride[0];
+            cd += cstride[0];
+        }
+    }
 }
 
 descriptor *matrix_add_old(descriptor *a, descriptor *b)

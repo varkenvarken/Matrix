@@ -72,7 +72,7 @@ descriptor *fill(descriptor *m, double d)
     return m;
 }
 
-descriptor *range(descriptor *m)
+descriptor *arange(descriptor *m)
 {
     matrix_fill_range(m);
     return m;
@@ -122,4 +122,40 @@ descriptor *eye(descriptor *m)
         }
     }
     return m;
+}
+
+double length(descriptor *m)
+{
+    return (double)(m->shape[0]);
+}
+
+descriptor *range(double start, double stop, double step)
+{
+    if (step == 0)
+    {
+        step = 1;
+    }
+    long shape = 1;
+    if (start > stop)
+    {
+        if (step < 0)
+        {
+            shape = (long)((start - stop) / -step);
+        }
+    }
+    else if (stop > start)
+    {
+        if (step > 0)
+        {
+            shape = (long)((stop - start) / step);
+        }
+    } // if start == stop shape stays 1
+    // fprintf(stderr, "start %.4f stop %.4f step %.4f shape %ld\n", start, stop, step, shape);
+    descriptor *r = new_descriptor(TYPE_DOUBLE, 1, &shape);
+    double *d = (double *)(r->data + r->offset);
+    for (long i = 0; i < shape; i++, d++, start += step)
+    {
+        *d = start;
+    }
+    return r;
 }

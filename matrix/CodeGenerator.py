@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220316115939
+# Version: 20220317164825
 
 from sys import stderr
 
@@ -281,8 +281,7 @@ class CodeGenerator:
                     self.code.append(pop_quad(reg=argregisters.pop()))
                     self.stack -= 8
                 # TODO: this should align the stack, NOT remove anything
-                self.adjust_stack()
-            self.code.append(function_call(name, returntype, an))
+            self.code.append(function_call(name, returntype, an, self.align_stack()))
             if returntype in ("double", "str", "mat"):
                 self.stack += 8
             elif returntype == "void":
@@ -477,7 +476,42 @@ class CodeGenerator:
             self.process(node.e1)
             self.code.append(jump(while_label))
             self.code.append(labelCode(end_label))
-
+        elif node.typ == "for":
+            for_label = labels["for"]
+            end_label = labels["endfor"]
+            etype = self.process(node.e0)  # get the range
+            self.code.append(pushZero())  # start index
+            self.stack -= 8  # we discount the expression result pushed by node.e0 because we keep the two on stack across the body
+            # self.stack += 16  we do NOT count these because that would mess up stack corrections in units inside the body
+            self.code.append(labelCode(for_label))
+            self.code.append(jump_if_end_of_range(self.align_stack(), end_label))
+            self.code.append(getItemAndInc(self.align_stack()))
+            self.stack += 8
+            # assign to variable
+            symbol = self.symbols[node.info["name"]]
+            if symbol.scope == "global":
+                self.code.append(
+                    move_quad(
+                        reg=f"{symbol.name}(%rip)",
+                        intro=f"store in global var {symbol.name}",
+                    )
+                )
+            else:
+                self.code.append(
+                    move_quad(
+                        reg=f"-{self.symbols[symbol.name].offset}(%rbp)",
+                        intro=f"store in local var {symbol.name}",
+                    )
+                )
+            self.code.append(
+                pop(1)
+            )  # this assignment inside a for loop is NOT an expression that stays on the stack
+            self.stack -= 8
+            self.process(node.e1)
+            self.code.append(jump(for_label))
+            self.code.append(labelCode(end_label))
+            self.code.append(pop(2))
+            # self.stack -=8  no correction we didn count the 2 arguments (and they are 16 bytes together)
         else:
             print("unprocessed syntax node", node)
 

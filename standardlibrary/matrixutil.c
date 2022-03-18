@@ -592,3 +592,10 @@ int is_contiguous(descriptor *m)
     }
     return 1;
 }
+
+int matrix_index_end(descriptor *m, long index){
+    if(m->dimensions == 0){
+        return 1;
+    }
+    return index >= m->shape[0];
+}

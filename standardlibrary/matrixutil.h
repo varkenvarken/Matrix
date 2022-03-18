@@ -24,5 +24,5 @@ void matrix_fill_range(descriptor *m);
 void dump_descriptor(descriptor *m);
 
 int is_contiguous(descriptor *m);
-
+int matrix_index_end(descriptor *m, long index);
 #endif

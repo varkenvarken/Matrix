@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220316163344
+# Version: 20220317160457
 
 from argparse import ArgumentError
 from collections import defaultdict
@@ -264,7 +264,7 @@ def local_string(s):
     return label, code
 
 
-def function_call(name, returntype, an=0, intro=None):
+def function_call(name, returntype, an=0, alignment=0, intro=None):
     nargs = CodeChunk(
         intro=intro,
         lines=[
@@ -272,7 +272,8 @@ def function_call(name, returntype, an=0, intro=None):
                 opcode="movq",
                 operands=f"${an},%rax",
                 comment="number of arguments, only needed when calling varargs",
-            )
+            ),
+            CodeLine(opcode="subq", operands=f"${alignment},%rsp"),
         ],
     )
     call = CodeChunk(
@@ -283,7 +284,8 @@ def function_call(name, returntype, an=0, intro=None):
                 comment="void return type, nothing to push"
                 if returntype == "void"
                 else None,
-            )
+            ),
+            CodeLine(opcode="addq", operands=f"${alignment},%rsp"),
         ]
     )
     if an >= 0:
@@ -813,4 +815,67 @@ def scalar_to_mat_top1(alignment):
             CodeLine(opcode="addq", operands=f"${alignment},%rsp"),
             CodeLine(opcode="movq", operands="%rax, 8(%rsp)"),
         ],
+    )
+
+
+def pushZero():
+    return CodeChunk(
+        lines=[
+            CodeLine(
+                opcode="pushq",
+                operands="$0",
+                comment="push zero (double or long are the same)",
+            )
+        ]
+    )
+
+
+# top is index (a long), top -1 is matrix
+def getItemAndInc(alignment):
+    convert = CodeChunk(
+        intro="getItemAndInc",
+        lines=[
+            CodeLine(
+                opcode="pushq",
+                operands="8(%rsp)",
+                comment="dup top[-1] (the matrix reference)",
+            ),
+            CodeLine(
+                opcode="cvtsi2sdq",
+                operands="8(%rsp), %xmm0",
+                comment="convert the long index to a double",
+            ),
+            CodeLine(opcode="movq", operands="%xmm0, %rax"),
+            CodeLine(opcode="pushq", operands="%rax"),
+        ],
+    )
+    code = index_matrix(alignment)
+    inc = CodeChunk(
+        lines=[
+            CodeLine(opcode="incq", operands="8(%rsp)", comment="increment the index"),
+        ]
+    )
+    return convert + code + inc
+
+
+# top is index (a long), top -1 is matrix. both stay on the stack
+def jump_if_end_of_range(alignment, end_label):
+    return CodeChunk(
+        intro="check if index is beyond length of matrix",
+        lines=[
+            CodeLine(opcode="movq", operands="8(%rsp),%rdi"),
+            CodeLine(opcode="movq", operands="(%rsp),%rsi"),
+            CodeLine(
+                opcode="call", operands="matrix_index_end"
+            ),  # no floats, so we skip the stack alignment check
+            CodeLine(opcode="and", operands="%rax, %rax"),
+            CodeLine(opcode="jne", operands=end_label),
+        ],
+    )
+
+
+def pop(n):
+    return CodeChunk(
+        intro=f"pop {n} items from the stack",
+        lines=[CodeLine(opcode="addq", operands=f"${n*8}, %rsp")],
     )
