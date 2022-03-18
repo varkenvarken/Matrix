@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220318100354
+# Version: 20220318102140
 
 from ast import While
 from math import expm1
@@ -122,67 +122,22 @@ class SyntaxTree:
         self.tree = self.process(parsetree)
 
     def add_builtins(self):
+    # fmt: off
         for name, symbol in (
-            (
-                "range",
-                Symbol(
-                    "range",
-                    "function",
-                    True,
-                    rtype="mat",
-                    parameters=["double", "double", "double"],
-                ),
-            ),
-            (
-                "printdouble",
-                Symbol(
-                    "printdouble", "function", True, rtype="void", parameters=["double"]
-                ),
-            ),
-            (
-                "print_descriptor",
-                Symbol(
-                    "print_descriptor",
-                    "function",
-                    True,
-                    rtype="void",
-                    parameters=["mat"],
-                ),
-            ),
-            ("copy", Symbol("copy", "function", True, rtype="mat", parameters=["mat"])),
-            (
-                "shape",
-                Symbol("shape", "function", True, rtype="mat", parameters=["mat"]),
-            ),
-            (
-                "reshape",
-                Symbol(
-                    "reshape", "function", True, rtype="mat", parameters=["mat", "mat"]
-                ),
-            ),
-            (
-                "fill",
-                Symbol(
-                    "fill", "function", True, rtype="mat", parameters=["mat", "double"]
-                ),
-            ),
-            (
-                "arange",
-                Symbol("arange", "function", True, rtype="mat", parameters=["mat"]),
-            ),
-            ("eye", Symbol("eye", "function", True, rtype="mat", parameters=["mat"])),
-            (
-                "length",
-                Symbol("length", "function", True, rtype="mat", parameters=["mat"]),
-            ),
-            (
-                "dimensions",
-                Symbol(
-                    "dimensions", "function", True, rtype="double", parameters=["mat"]
-                ),
-            ),
+            ("range",           Symbol("range",             "function", True, rtype="mat",    parameters=["double", "double", "double"])),
+            ("printdouble",     Symbol("printdouble",       "function", True, rtype="void",   parameters=["double"])),
+            ("print_descriptor",Symbol("print_descriptor",  "function", True, rtype="void",   parameters=["mat"])),
+            ("copy",            Symbol("copy",              "function", True, rtype="mat",    parameters=["mat"])),
+            ("shape",           Symbol("shape",             "function", True, rtype="mat",    parameters=["mat"])),
+            ("reshape",         Symbol("reshape",           "function", True, rtype="mat",    parameters=["mat", "mat"])),
+            ("fill",            Symbol("fill",              "function", True, rtype="mat",    parameters=["mat", "double"])),
+            ("arange",          Symbol("arange",            "function", True, rtype="mat",    parameters=["mat"])),
+            ("eye",             Symbol("eye",               "function", True, rtype="mat",    parameters=["mat"])),
+            ("length",          Symbol("length",            "function", True, rtype="mat",    parameters=["mat"])),
+            ("dimensions",      Symbol("dimensions",        "function", True, rtype="double", parameters=["mat"]))
         ):
             self.symbols[name] = symbol
+    # fmt: on
 
     def process(self, node):
         if node is None:
