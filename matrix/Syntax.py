@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220316110029
+# Version: 20220318100354
 
 from ast import While
 from math import expm1
@@ -118,7 +118,71 @@ def getShape(node):
 class SyntaxTree:
     def __init__(self, parsetree):
         self.symbols = Scope(scope="global")
+        self.add_builtins()
         self.tree = self.process(parsetree)
+
+    def add_builtins(self):
+        for name, symbol in (
+            (
+                "range",
+                Symbol(
+                    "range",
+                    "function",
+                    True,
+                    rtype="mat",
+                    parameters=["double", "double", "double"],
+                ),
+            ),
+            (
+                "printdouble",
+                Symbol(
+                    "printdouble", "function", True, rtype="void", parameters=["double"]
+                ),
+            ),
+            (
+                "print_descriptor",
+                Symbol(
+                    "print_descriptor",
+                    "function",
+                    True,
+                    rtype="void",
+                    parameters=["mat"],
+                ),
+            ),
+            ("copy", Symbol("copy", "function", True, rtype="mat", parameters=["mat"])),
+            (
+                "shape",
+                Symbol("shape", "function", True, rtype="mat", parameters=["mat"]),
+            ),
+            (
+                "reshape",
+                Symbol(
+                    "reshape", "function", True, rtype="mat", parameters=["mat", "mat"]
+                ),
+            ),
+            (
+                "fill",
+                Symbol(
+                    "fill", "function", True, rtype="mat", parameters=["mat", "double"]
+                ),
+            ),
+            (
+                "arange",
+                Symbol("arange", "function", True, rtype="mat", parameters=["mat"]),
+            ),
+            ("eye", Symbol("eye", "function", True, rtype="mat", parameters=["mat"])),
+            (
+                "length",
+                Symbol("length", "function", True, rtype="mat", parameters=["mat"]),
+            ),
+            (
+                "dimensions",
+                Symbol(
+                    "dimensions", "function", True, rtype="double", parameters=["mat"]
+                ),
+            ),
+        ):
+            self.symbols[name] = symbol
 
     def process(self, node):
         if node is None:
@@ -428,6 +492,20 @@ class SyntaxTree:
             return SyntaxNode(
                 "while",
                 "",
+                level=node.level + 1,
+                **node.src(),
+                e0=self.process(node.e0),
+                e1=self.process(node.e1),
+            )
+        elif node.token == "for":
+            name = node.value
+            if name not in self.symbols:
+                print(f"unknown variable {name}")
+                return None
+            var = self.symbols[name]
+            return SyntaxNode(
+                "for",
+                {"name": name, "scope": var.scope, "type": var.type},
                 level=node.level + 1,
                 **node.src(),
                 e0=self.process(node.e0),
