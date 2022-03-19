@@ -275,3 +275,76 @@ MATRIX_BINOP(divide, /)
 MATRIX_BINOPF(modulo, fmod)
 
 MATRIX_UNOP(negate, -)
+
+RECURSIVE_BINOP(notequal)
+
+MATRIX_BINOP(notequal, !=)
+
+double _notequalany_double(void *a, void *b, long stride_a, long stride_b, long n){
+    while (n--)
+    {
+        if(*(double *)a  != (*(double *)a))
+            return 1.0;
+        b += stride_b;
+        a += stride_a;
+    }
+}
+
+double _recursive_notequalany_double(void *ad, void *bd, long *astride, long *bstride, long *shape, long dim)
+{
+    if (dim == 2)
+    {
+        for (long i = 0; i < shape[0]; i++)
+        {
+            if (_notequalany_double(ad, bd, astride[1], bstride[1], shape[1]) != 0.0)
+                return 1.0;
+            ad += astride[0];
+            bd += bstride[0];
+        }
+    }
+    else
+    {
+        for (long i = 0; i < shape[0]; i++)
+        {
+            if (_recursive_notequalany_double(ad, bd, astride + 1, bstride + 1, shape + 1, dim - 1) != 0.0)
+                return 1.0;
+            ad += astride[0];
+            bd += bstride[0];
+        }
+    }
+    return 0.0;
+}
+
+double matrix_notequalany(descriptor *a, descriptor *b)
+{
+    descriptor *ab[2];
+    binop_common("notequalany", a, b, ab);
+    a = ab[0];
+    b = ab[1];
+
+    long a_index[MAX_DIMENSIONS];
+    long b_index[MAX_DIMENSIONS];
+    for (int i = 0; i < a->dimensions; i++)
+        a_index[i] = b_index[i] = 0;
+    void *ad = a->data + a->offset;
+    void *bd = b->data + b->offset;
+
+    switch (a->dimensions)
+    {
+    case 0:
+        return (double)(*((double *)ad) != *((double *)bd));
+        break;
+    case 1:
+        return _notequalany_double(ad, bd, a->stride[0], b->stride[0], a->shape[0]);
+        break;
+    default:
+        for (long i = 0; i < a->shape[0]; i++)
+        {
+            if (_recursive_notequalany_double (ad, bd, a->stride + 1, b->stride + 1, a->shape + 1, a->dimensions - 1) != 0.0)
+                return 1.0;
+            ad += a->stride[0];
+            bd += b->stride[0];
+        }
+    }
+    return 0.0;
+}

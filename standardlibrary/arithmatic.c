@@ -73,3 +73,14 @@ void _negate_double(void *c, void *a, long stride_c, long stride_a, long n)
         a += stride_a;
     }
 }
+
+void _notequal_double(void *c, void *a, void *b, long stride_c, long stride_a, long stride_b, long n)
+{
+    while (n--)
+    {
+        *(double *)c = *(double *)a != *(double *)b;
+        c += stride_c;
+        b += stride_b;
+        a += stride_a;
+    }
+}

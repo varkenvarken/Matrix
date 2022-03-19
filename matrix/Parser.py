@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220311161616
+# Version: 20220319110719
 
 from operator import index
 from sys import stderr
@@ -163,8 +163,13 @@ class MatrixParser(Parser):
     #            | expr
 
     @_('reference "=" expr')
+    @_("reference APLUS expr")
+    @_("reference AMINUS expr")
+    @_("reference AMUL expr")
+    @_("reference ADIV expr")
+    @_("reference AMOD expr")
     def expression(self, p):
-        return ParseNode("assignment", e0=p.reference, e1=p.expr, prod=p)
+        return ParseNode("assignment", value=p[1], e0=p.reference, e1=p.expr, prod=p)
 
     @_("expr")
     def expression(self, p):
@@ -416,6 +421,10 @@ class MatrixParser(Parser):
     @_("FOR NAME IN expr COLON NEWLINE INDENT suite DEDENT")
     def compound(self, p):
         return ParseNode("for", p.NAME, e0=p.expr, e1=p.suite, prod=p)
+
+    @_('ASSERT expr "," STRINGLITERAL')
+    def compound(self, p):
+        return ParseNode("assert", p.STRINGLITERAL, e0=p.expr, prod=p)
 
     # empty production, used in many optional bits and {}* repeats as EBNF notation is buggy (?)
     @_("")

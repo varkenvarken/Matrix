@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220316104902
+# Version: 20220319110310
 
 from re import compile, match, search
 
@@ -73,11 +73,19 @@ class MatrixLexer(Lexer):
         FOR,
         IN,
         CONST,
+        APLUS,
+        AMINUS,
+        AMUL,
+        ADIV,
+        AMOD,
+        ASSERT,
     }
 
     ignore = " \t"
     ignore_comment = r"((\#)|(//)).*"
     literals = {"=", "*", "/", "(", ")", ","}
+
+    STRINGLITERAL = r'f?"[^"\\\r\n]*(?:\\.[^"\\\r\n]*)*"'  # see: https://www.regular-expressions.info/examplesprogrammer.html
 
     # Tokens
     NAME = r"[a-zA-Z_][a-zA-Z0-9_]*"
@@ -101,6 +109,7 @@ class MatrixLexer(Lexer):
     NAME["in"] = IN
     NAME["for"] = FOR
     NAME["const"] = CONST
+    NAME["assert"] = ASSERT
 
     @_(r"[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?")
     # @_(r"[0-9]+")
@@ -108,19 +117,24 @@ class MatrixLexer(Lexer):
         t.value = float(t.value)
         return t
 
-    STRINGLITERAL = r'"[^"\\\r\n]*(?:\\.[^"\\\r\n]*)*"'  # see: https://www.regular-expressions.info/examplesprogrammer.html
+    # longest first!
+    APLUS = r"\+="
+    AMINUS = r"\-="
+    AMUL = r"\*="
+    ADIV = r"/="
+    AMOD = r"%="
     PLUS = r"\+"
     MINUS = r"-"
+    POWER = r"\*\*"
     EQUAL = r"=="
     NOTEQUAL = r"!="
-    LESS = r"\<"
-    GREATER = r"\>"
     LESSOREQUAL = r"\<="
     GREATEROREQUAL = r"\>="
+    LESS = r"\<"
+    GREATER = r"\>"
     MATMUL = r"@"
     MODULO = r"%"
     DOT = r"\."
-    POWER = r"\*\*"
     ROOT = r"√"
     CROSS = r"×"
     LBRACKET = r"\["

@@ -328,17 +328,15 @@ void print_descriptor(descriptor *m)
 // create a new view based on a single index into the highest dimension
 descriptor *matrix_index(descriptor *m, long index)
 {
-#ifdef DEBUG
     printf("matrix_index [%ld]\n", index);
     dump_descriptor(m);
-#endif
-    // print_descriptor(m);
+    print_descriptor(m);
 
     if (m->dimensions)
     {
         descriptor *newdesc = new_descriptor(m->type, m->dimensions - 1, m->shape + 1);
-        // printf("INTERMEDIATE matrix_index [%ld]\n", index);
-        // dump_descriptor(newdesc);
+        printf("INTERMEDIATE matrix_index [%ld]\n", index);
+        dump_descriptor(newdesc);
 
         for (int j = 0, i = 1; i < m->dimensions; i++, j++)
         {
@@ -349,9 +347,9 @@ descriptor *matrix_index(descriptor *m, long index)
         newdesc->data = m->data + m->offset;
         newdesc->offset = index * m->stride[0];
 
-        // printf("RESULT matrix_index [%ld]\n", index);
-        // dump_descriptor(newdesc);
-        // print_descriptor(newdesc);
+        printf("RESULT matrix_index [%ld]\n", index);
+        dump_descriptor(newdesc);
+        print_descriptor(newdesc);
 
         return newdesc;
     }
@@ -593,9 +591,31 @@ int is_contiguous(descriptor *m)
     return 1;
 }
 
-int matrix_index_end(descriptor *m, long index){
-    if(m->dimensions == 0){
+int matrix_index_end(descriptor *m, long index)
+{
+    if (m->dimensions == 0)
+    {
         return 1;
     }
     return index >= m->shape[0];
+}
+
+double mat_to_double(descriptor *m)
+{
+    switch (m->dimensions)
+    {
+    case 0:
+        return *((double *)(m->data + m->offset));
+        break;
+    case 1:
+        if (m->shape[0] == 1)
+        {
+            return *((double *)(m->data + m->offset));
+        }
+        break;
+    default:
+        break;
+    }
+    fputs("mat_to_double: not a rank 0 nor 1 dimensional with length 1", stderr);
+    exit(EXIT_FAILURE);
 }

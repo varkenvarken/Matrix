@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220318154512
+# Version: 20220319152952
 
 from argparse import ArgumentError
 from collections import defaultdict
@@ -216,6 +216,42 @@ def modulo_double():
             CodeLine(opcode="cvtsi2sdl", operands="%eax, %xmm2"),
             CodeLine(opcode="mulsd", operands="%xmm2, %xmm1"),
             CodeLine(opcode="subsd", operands="%xmm1, %xmm0"),
+        ],
+    )
+    push = push_quad(reg="%xmm0")
+    return pop0 + pop1 + binop + push
+
+
+def notequal_double():
+    pop0 = pop_quad(intro="check if double arguments are not equal", reg="%xmm1")
+    pop1 = pop_quad(reg="%xmm0")
+    label = labels[".cmp_nan"]
+    endlabel = labels[".cmp_end"]
+    one = labels[".cmp_one"]
+    binop = CodeChunk(
+        lines=[
+            CodeLine(
+                opcode="ucomisd",
+                operands=f"%xmm1, %xmm0",
+                comment="unordered compare two doubles",
+            ),
+            CodeLine(
+                opcode="jp",
+                operands=label,
+                comment="jump if unordered (one of them is a NaN)",
+            ),
+            CodeLine(opcode="jne", operands=label, comment="jump if not equal"),
+            CodeLine(opcode="pxor", operands=f"%xmm0, %xmm0", comment="zero out xmm0"),
+            CodeLine(opcode="jmp", operands=endlabel),
+            CodeLine(label=label, opcode="movsd", operands=f"{one}(%rip),%xmm0"),
+            CodeLine(opcode="jmp", operands=endlabel),
+            CodeLine(
+                opcode=".p2align",
+                operands="3",
+                comment="embedded aligned double constant",
+            ),
+            CodeLine(label=one, opcode=".double", operands="1.0"),
+            CodeLine(label=endlabel),
         ],
     )
     push = push_quad(reg="%xmm0")
@@ -795,11 +831,12 @@ def stack_adjust(size):
 
 def jump_if_false(label):
     return CodeChunk(
+        intro="jump if false (i.e. anything non-zero)",
         lines=[
             CodeLine(opcode="popq", operands="%rax"),
             CodeLine(opcode="cmp", operands="$0, %rax"),
             CodeLine(opcode="jz", operands=label),
-        ]
+        ],
     )
 
 
@@ -843,6 +880,36 @@ def scalar_to_mat_top1(alignment):
             CodeLine(opcode="call", operands="scalar_to_mat"),
             CodeLine(opcode="addq", operands=f"${alignment},%rsp"),
             CodeLine(opcode="movq", operands="%rax, 8(%rsp)"),
+        ],
+    )
+
+
+def duplicate_top_1():
+    return CodeChunk(
+        intro="duplicate top[-1] (top1 top -> top1 top1 top)",
+        lines=[
+            CodeLine(opcode="popq", operands="%rax"),
+            CodeLine(opcode="movq", operands="(%rsp), %rdi"),
+            CodeLine(opcode="pushq", operands="%rdi"),
+            CodeLine(opcode="pushq", operands="%rax"),
+        ],
+    )
+
+
+def mat_to_double(alignment):
+    return CodeChunk(
+        intro="convert matrix to double",
+        lines=[
+            CodeLine(opcode="movq", operands="(%rsp), %rax", comment="we do not pop"),
+            CodeLine(
+                opcode="subq",
+                operands=f"${alignment},%rsp",
+                comment="make sure stack is 16 byte aligned",
+            ),
+            CodeLine(opcode="movq", operands="%rax, %rdi"),
+            CodeLine(opcode="call", operands="mat_to_double"),
+            CodeLine(opcode="addq", operands=f"${alignment},%rsp"),
+            CodeLine(opcode="movq", operands="%xmm0, (%rsp)"),
         ],
     )
 

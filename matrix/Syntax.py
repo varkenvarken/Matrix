@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220318135942
+# Version: 20220319192212
 
 from ast import While
 from math import expm1
@@ -133,8 +133,9 @@ class SyntaxTree:
             ("fill",            Symbol("fill",              "function", True, rtype="mat",    parameters=["mat", "double"])),
             ("arange",          Symbol("arange",            "function", True, rtype="mat",    parameters=["mat"])),
             ("eye",             Symbol("eye",               "function", True, rtype="mat",    parameters=["mat"])),
-            ("length",          Symbol("length",            "function", True, rtype="mat",    parameters=["mat"])),
-            ("dimensions",      Symbol("dimensions",        "function", True, rtype="double", parameters=["mat"]))
+            ("length",          Symbol("length",            "function", True, rtype="double", parameters=["mat"])),
+            ("dimensions",      Symbol("dimensions",        "function", True, rtype="double", parameters=["mat"])),
+            ("error",           Symbol("error",             "function", True, rtype="void",   parameters=["str"]))
         ):
             self.symbols[name] = symbol
     # fmt: on
@@ -253,8 +254,13 @@ class SyntaxTree:
         elif node.token == "function call":
             name = node.value
             if name not in self.symbols:
-                print(f"unknown function {name}")
-                return None
+                print(f"unknown function '{name}'")
+                return SyntaxNode(
+                    "error",
+                    f"unknown function '{name}'",
+                    level=node.level + 1,
+                    **node.src(),
+                )
             else:  # arguments are evaluated left to right
                 fun = self.symbols[name]
                 alist = node.e0
@@ -384,7 +390,7 @@ class SyntaxTree:
                     parameters.append(parameter.e0.value)
             # TODO: warn if redefined (with same signature)
             self.symbols[fname] = Symbol(
-                fname, "function", True, rtype=node.e0.value, parameters=parameters
+                fname, "function", True, rtype=node.e0.value, parameters=list(reversed(parameters))
             )
             # push a new local scope
             self.symbols = Scope(outer=self.symbols)
@@ -425,7 +431,7 @@ class SyntaxTree:
         elif node.token == "assignment":
             return SyntaxNode(
                 "assign",
-                node.e0.value,
+                {"name":node.e0.value,"op":node.value},
                 level=node.level + 1,
                 **node.src(),
                 e0=self.process(node.e0),
@@ -465,6 +471,23 @@ class SyntaxTree:
                 **node.src(),
                 e0=self.process(node.e0),
                 e1=self.process(node.e1),
+            )
+        elif node.token in ("equal","notequal","greaterorequal","lessorequal","less","greater"):
+            return SyntaxNode(
+                "binop",
+                {"op": node.token},
+                level=node.level + 1,
+                **node.src(),
+                e0=self.process(node.e0),
+                e1=self.process(node.e1),
+            )
+        elif node.token == "assert":
+            return SyntaxNode(
+                "assert",
+                node.value,
+                level=node.level + 1,
+                **node.src(),
+                e0=self.process(node.e0),
             )
         elif node.token == "default":
             return SyntaxNode(

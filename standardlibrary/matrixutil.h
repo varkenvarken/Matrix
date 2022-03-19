@@ -25,4 +25,7 @@ void dump_descriptor(descriptor *m);
 
 int is_contiguous(descriptor *m);
 int matrix_index_end(descriptor *m, long index);
+
+double mat_to_double(descriptor *m);
+
 #endif

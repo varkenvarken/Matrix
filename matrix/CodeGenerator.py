@@ -1,8 +1,9 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220318154604
+# Version: 20220319201034
 
+from cmath import exp
 from sys import stderr
 
 from .CodeSnippets import *
@@ -184,6 +185,7 @@ class CodeGenerator:
                     self.code.append(
                         unop_mat(unop="matrix_negate", intro="negate a matrix")
                     )
+                return type0
             else:
                 print(f"unprocessed unop {node.info['op']} for type {type0}")
         elif node.typ == "binop":
@@ -218,6 +220,8 @@ class CodeGenerator:
                     )
                 elif node.info["op"] == "%":
                     self.code.append(modulo_double())
+                elif node.info["op"] == "notequal":
+                    self.code.append(notequal_double())
                 else:
                     print("unprocessed binop for two doubles", node.info["op"])
                 self.stack -= 8
@@ -256,6 +260,15 @@ class CodeGenerator:
                     self.code.append(
                         binop_mat(binop="matrix_modulo", intro="divide two matrices")
                     )
+                elif node.info["op"] == "notequal":
+                    self.code.append(
+                        binop_mat(
+                            binop="matrix_notequalany",
+                            intro="compare two matrices and return a double",
+                        )
+                    )
+                    self.stack -= 8
+                    return "double"
                 else:
                     print("unprocessed binop for two matrices", node.info["op"])
                 self.stack -= 8
@@ -289,11 +302,28 @@ class CodeGenerator:
             if arg is not None:  # empty parameter list is allowed
                 assert arg.typ == "argument"
                 argtypes = []
+                expected_types = self.symbols[name].parameters[:]
+                print(name, returntype, expected_types)
                 while arg:
                     self.code.append(f"# calculate argument {an}")
-                    argtypes.append(self.process(arg.e1))
-                    arg = arg.e0
+                    # the type should match the type of the argument
+                    type0 = expected_types.pop(0)
+                    type1 = self.process(arg.e1)
+                    print(type0, type1, argtypes)
+                    if type0 != type1 or type0 is None or type1 is None:
+                        if type0 == "mat" and type1 == "double":
+                            self.code.append(scalar_to_mat(self.align_stack()))
+                            type1 = "mat"
+                        elif type0 == "double" and type1 == "mat":
+                            self.code.append(mat_to_double(self.align_stack()))
+                            type1 = "double"
+                        else:
+                            print(f"Incompatible types {type0} {type1} in node {node}")
+                            return
+                    argtypes.append(type0)
+                    arg = arg.e0  # next one
                     an += 1
+                print(argtypes)
                 ndoubles = 0
                 nothers = 0
                 argregisters = []
@@ -309,7 +339,6 @@ class CodeGenerator:
                 for i in range(an):
                     self.code.append(pop_quad(reg=argregisters.pop()))
                     self.stack -= 8
-                # TODO: this should align the stack, NOT remove anything
             self.code.append(function_call(name, returntype, an, self.align_stack()))
             if returntype in ("double", "str", "mat"):
                 self.stack += 8
@@ -378,7 +407,40 @@ class CodeGenerator:
                 self.stack += 8
                 if node.e0 is not None:
                     assert node.e0.typ == "indexlist"
-                    print(f"unprocessed local slice/index {name}")
+                    indexlist = node.e0
+                    last_was_slice = 0
+                    while indexlist is not None:
+                        index_or_slice = indexlist.e0
+                        indexlist = indexlist.e1
+                        if index_or_slice.typ == "index":
+                            if last_was_slice > 0:
+                                self.code.append(
+                                    slice_matrix(self.align_stack(), last_was_slice)
+                                )
+                                self.stack -= 8 * last_was_slice * 3
+                                last_was_slice = 0
+                            itype = self.process(index_or_slice.e0)
+                            if itype == "mat":
+                                self.code.append(mat_to_double(self.align_stack()))
+                            elif itype == "str":
+                                print("indexing with a matrix not allowed")
+                            self.code.append(index_matrix(self.align_stack()))
+                            self.stack -= 8
+                        elif index_or_slice.typ == "slice":
+                            self.process(index_or_slice.e0)
+                            self.process(index_or_slice.e1)
+                            self.process(index_or_slice.e2)
+                            last_was_slice += 1
+                        else:
+                            print(
+                                f"index type of {index_or_slice.typ} ignored on {name}"
+                            )
+                    if last_was_slice > 0:
+                        self.code.append(
+                            slice_matrix(self.align_stack(), last_was_slice)
+                        )
+                        self.stack -= 8 * last_was_slice * 3
+                        last_was_slice = 0
             else:
                 print(
                     f'unprocessed var reference {node.info["scope"]} {node.info["type"]} {node.info["name"]}'
@@ -405,13 +467,13 @@ class CodeGenerator:
             self.code.append(pop_quad(reg=f"{'%xmm0' if rtype=='double' else '%rax'}"))
             self.stack -= 8
             self.code.append(f"        jmp end_{self.function}")
-        elif node.typ == "assign":
-            symbol = self.symbols[node.info]
+        elif node.typ in ("assign"):
+            symbol = self.symbols[node.info["name"]]
             # Note that assignment is an expression so we do not pop the stack
             if (
                 symbol.type == "mat" and node.e0 is not None and node.e0.e0 is not None
             ):  # assignment to indexed matrix
-                symbol = self.symbols[node.info]
+                symbol = self.symbols[node.info["name"]]
                 if symbol.scope == "global":
                     assert node.e0.e0.typ == "indexlist"
                     indexlist = node.e0.e0
@@ -458,27 +520,153 @@ class CodeGenerator:
                     # and a view into the destination matrix just below it (TODO: check if dimensions match)
                     self.code.append(matCopy2())
                     self.stack -= 8
+                    return typ
                 else:
                     print(
                         f"local indexed matrix assignment to {symbol.name} ignored for now"
                     )
-            else:
-                typ = self.process(node.e1)
-                assert symbol.type == typ
-                if symbol.scope == "global":
-                    self.code.append(
-                        move_quad(
-                            reg=f"{symbol.name}(%rip)",
-                            intro=f"store in global var {symbol.name}",
+            else:  # assignment to a double or an unindexed matrix
+                type0 = symbol.type
+                type1 = self.process(node.e1)
+
+                if node.info["op"] == "=":
+                    if type0 != type1 or type0 is None or type1 is None:
+                        if type0 == "mat" and type1 == "double":
+                            self.code.append(scalar_to_mat(self.align_stack()))
+                            type1 = "mat"
+                        elif type0 == "double" and type1 == "mat":
+                            self.code.append(mat_to_double(self.align_stack()))
+                            type0 = "mat"
+                        else:
+                            print(f"Incompatible types {type0} {type1} in node {node}")
+                            return
+
+                    if symbol.scope == "global":
+                        self.code.append(
+                            move_quad(
+                                reg=f"{symbol.name}(%rip)",
+                                intro=f"store in global var {symbol.name}",
+                            )
                         )
-                    )
-                else:
-                    self.code.append(
-                        move_quad(
-                            reg=f"-{self.symbols[symbol.name].offset}(%rbp)",
-                            intro=f"store in local var {symbol.name}",
+                    else:
+                        self.code.append(
+                            move_quad(
+                                reg=f"-{self.symbols[symbol.name].offset}(%rbp)",
+                                intro=f"store in local var {symbol.name}",
+                            )
                         )
-                    )
+                    return type1
+                else:  # aplus, aminus ...
+                    print("APLUS")
+
+                    # WARNING: massive chunk of code duplicated from binop
+                    # except for comparisons and we do NOT adjust the stack
+                    if type0 != type1 or type0 is None or type1 is None:
+                        if type0 == "mat" and type1 == "double":
+                            self.code.append(scalar_to_mat(self.align_stack()))
+                            type1 = "mat"
+                        elif type0 == "double" and type1 == "mat":
+                            self.code.append(mat_to_double(self.align_stack()))
+                            type1 = "double"
+                        else:
+                            print(f"Incompatible types {type0} {type1} in node {node}")
+                            return
+                    if symbol.scope == "global":
+                        self.code.append(
+                            load_quad(
+                                reg=f"{symbol.name}(%rip)",
+                                intro=f"retrieve global var {symbol.name}",
+                            )
+                        )
+                    else:
+                        self.code.append(
+                            load_quad(
+                                reg=f"-{self.symbols[symbol.name].offset}(%rbp)",
+                                intro=f"retrieve local var {symbol.name}",
+                            )
+                        )
+                    if type0 == "double":
+                        if node.info["op"] == "+=":
+                            self.code.append(
+                                binop_double(binop="addsd", intro="add two doubles")
+                            )
+                        elif node.info["op"] == "-=":
+                            self.code.append(
+                                binop_double(
+                                    binop="subsd", intro="subtract two doubles"
+                                )
+                            )
+                        elif node.info["op"] == "*=":
+                            self.code.append(
+                                binop_double(
+                                    binop="mulsd", intro="subtract two doubles"
+                                )
+                            )
+                        elif node.info["op"] == "/=":
+                            self.code.append(
+                                binop_double(
+                                    binop="divsd", intro="subtract two doubles"
+                                )
+                            )
+                        elif node.info["op"] == "%=":
+                            self.code.append(modulo_double())
+                        else:
+                            print("unprocessed binop for two doubles", node.info["op"])
+                    elif type0 == "str":
+                        if node.info["op"] == "+=":
+                            self.code.append(
+                                binop_str(binop="addstring", intro="add two strings")
+                            )
+                        else:
+                            print("unprocessed binop for two strings", node.info["op"])
+                    elif type0 == "mat":
+                        if node.info["op"] == "+=":
+                            self.code.append(
+                                binop_mat(binop="matrix_add", intro="add two matrices")
+                            )
+                        elif node.info["op"] == "-=":
+                            self.code.append(
+                                binop_mat(
+                                    binop="matrix_subtract",
+                                    intro="subtract two matrices",
+                                )
+                            )
+                        elif node.info["op"] == "*=":
+                            self.code.append(
+                                binop_mat(
+                                    binop="matrix_multiply",
+                                    intro="multiply two matrices",
+                                )
+                            )
+                        elif node.info["op"] == "/=":
+                            self.code.append(
+                                binop_mat(
+                                    binop="matrix_divide", intro="divide two matrices"
+                                )
+                            )
+                        elif node.info["op"] == "%=":
+                            self.code.append(
+                                binop_mat(
+                                    binop="matrix_modulo", intro="divide two matrices"
+                                )
+                            )
+                        else:
+                            print("unprocessed binop for two matrices", node.info["op"])
+                    if symbol.scope == "global":
+                        self.code.append(
+                            move_quad(
+                                reg=f"{symbol.name}(%rip)",
+                                intro=f"store in global var {symbol.name}",
+                            )
+                        )
+                    else:
+                        self.code.append(
+                            move_quad(
+                                reg=f"-{self.symbols[symbol.name].offset}(%rbp)",
+                                intro=f"store in local var {symbol.name}",
+                            )
+                        )
+                    return type1
         elif node.typ == "if":
             etype = self.process(node.e0)
             # TODO: verify etype is double
