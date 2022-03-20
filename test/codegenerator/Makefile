@@ -2,7 +2,9 @@ PYTHON=python
 MODULE=matrix
 CMD=$(PYTHON) -m $(MODULE)
 GCC=gcc
-LINK_OPTS=../../standardlibrary/matrix_stdlib.so -lm
+# https://stackoverflow.com/questions/19023018/overriding-c-library-functions-calling-original
+# we wrap the error function with our own
+LINK_OPTS=-Wl,--wrap=error ../../standardlibrary/matrix_stdlib.so -lm
 
 export PYTHONPATH := ../..
 

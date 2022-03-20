@@ -4,7 +4,9 @@ INCLUDES = $(patsubst %.c,%.h,$(SOURCES))
 
 CC = gcc -fPIC -O3
 COMPILE_OPTS = -c -fPIC -O3
-LINK_OPTS = -shared -fPIC -O3
+# https://stackoverflow.com/questions/19023018/overriding-c-library-functions-calling-original
+# we wrap the error function with our own
+LINK_OPTS = -Wl,--wrap=error -shared -fPIC -O3
 
 all: matrix_stdlib.so
 

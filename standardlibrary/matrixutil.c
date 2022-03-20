@@ -328,15 +328,15 @@ void print_descriptor(descriptor *m)
 // create a new view based on a single index into the highest dimension
 descriptor *matrix_index(descriptor *m, long index)
 {
-    printf("matrix_index [%ld]\n", index);
-    dump_descriptor(m);
-    print_descriptor(m);
+    // printf("matrix_index [%ld]\n", index);
+    // dump_descriptor(m);
+    // print_descriptor(m);
 
     if (m->dimensions)
     {
         descriptor *newdesc = new_descriptor(m->type, m->dimensions - 1, m->shape + 1);
-        printf("INTERMEDIATE matrix_index [%ld]\n", index);
-        dump_descriptor(newdesc);
+        // printf("INTERMEDIATE matrix_index [%ld]\n", index);
+        // dump_descriptor(newdesc);
 
         for (int j = 0, i = 1; i < m->dimensions; i++, j++)
         {
@@ -347,9 +347,9 @@ descriptor *matrix_index(descriptor *m, long index)
         newdesc->data = m->data + m->offset;
         newdesc->offset = index * m->stride[0];
 
-        printf("RESULT matrix_index [%ld]\n", index);
-        dump_descriptor(newdesc);
-        print_descriptor(newdesc);
+        // printf("RESULT matrix_index [%ld]\n", index);
+        // dump_descriptor(newdesc);
+        // print_descriptor(newdesc);
 
         return newdesc;
     }

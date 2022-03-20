@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220319201034
+# Version: 20220320121145
 
 from cmath import exp
 from sys import stderr
@@ -262,7 +262,7 @@ class CodeGenerator:
                     )
                 elif node.info["op"] == "notequal":
                     self.code.append(
-                        binop_mat(
+                        binop_mat_scalar(
                             binop="matrix_notequalany",
                             intro="compare two matrices and return a double",
                         )

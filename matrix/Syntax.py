@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220319192212
+# Version: 20220320120039
 
 from ast import While
 from math import expm1
@@ -126,6 +126,7 @@ class SyntaxTree:
         for name, symbol in (
             ("range",           Symbol("range",             "function", True, rtype="mat",    parameters=["double", "double", "double"])),
             ("printdouble",     Symbol("printdouble",       "function", True, rtype="void",   parameters=["double"])),
+            ("printstring",     Symbol("printstring",       "function", True, rtype="void",   parameters=["str"])),
             ("print_descriptor",Symbol("print_descriptor",  "function", True, rtype="void",   parameters=["mat"])),
             ("copy",            Symbol("copy",              "function", True, rtype="mat",    parameters=["mat"])),
             ("shape",           Symbol("shape",             "function", True, rtype="mat",    parameters=["mat"])),
