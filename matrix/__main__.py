@@ -1,5 +1,6 @@
 import argparse
 import fileinput
+import subprocess
 from sys import stderr, stdout
 
 
@@ -66,11 +67,35 @@ if __name__ == "__main__":
         help="build the syntax tree then stop & show the syntax tree",
     )
     argparser.add_argument(
+        "-S",
+        "--assemble",
+        default=False,
+        action="store_true",
+        help="generate assembly then stop & show it",
+    )
+    argparser.add_argument(
+        "-c",
+        "--compile",
+        default=False,
+        action="store_true",
+        help="compile assembly then stop",
+    )
+    argparser.add_argument(
         "-v",
         "--verbose",
         default=False,
         action="store_true",
         help="print additional debug info to stderr",
+    )
+    argparser.add_argument(
+        "--cc",
+        default="gcc",
+        help="executable compiler and linker",
+    )
+    argparser.add_argument(
+        "--stdlib",
+        default="../../standardlibrary/matrix_stdlib.so",
+        help="location of the standard library",
     )
     args = argparser.parse_args()
 
@@ -138,7 +163,34 @@ if __name__ == "__main__":
     code = CodeGenerator(syntaxtree)
     if args.verbose:
         print(f"Created assembly code", file=stderr)
-    f = outputfile(args.output, ".s")
-    code.print(f)
-    if f != stdout:
-        f.close()
+    if args.debug:
+        f = outputfile(args.output, ".s")
+        code.print(f)
+        if f != stdout:
+            f.close()
+    if args.assemble:
+        exit(0)
+
+    assembleargs = [args.cc, "-c", args.output + ".s"]
+    if args.verbose:
+        print("Assembling:", " ".join(assembleargs))
+    subprocess.run(assembleargs)
+    if args.verbose:
+        print(f"Compiled assembly code to {args.output + '.o'}", file=stderr)
+    if args.compile:
+        exit(0)
+
+    linkargs = [
+        args.cc,
+        "-Wl,--wrap=error",
+        args.output + ".o",
+        args.stdlib,
+        "-lm",
+        "-o",
+        args.output + ".out",
+    ]
+    if args.verbose:
+        print("Linking:", " ".join(linkargs))
+    subprocess.run(linkargs)
+    if args.verbose:
+        print(f"Linked to executable {args.output + '.out'}", file=stderr)
