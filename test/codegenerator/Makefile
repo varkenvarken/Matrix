@@ -4,6 +4,7 @@ CMD=$(PYTHON) -m $(MODULE)
 GCC=gcc
 # https://stackoverflow.com/questions/19023018/overriding-c-library-functions-calling-original
 # we wrap the error function with our own
+# Note: not used anymore because we moved all linking into Matrix itself
 LINK_OPTS=-Wl,--wrap=error ../../standardlibrary/matrix_stdlib.so -lm
 
 export PYTHONPATH := ../..
@@ -27,17 +28,14 @@ all: progs
 # also, make it depend on an empty target so each test will always run regardless
 # (this is easier than make it dependent on all kinds of files in the matrix module
 # the $< will make sure the input is the first file and not the FORCE also ($^ would do that) 
-%.s : %.mat FORCE
-	@- ($(CMD) -d -o $(basename $@) $< 2>&1 >/dev/null) || echo $< did not compile
-
-%.out : %.s
-	@- $(GCC) -o $@ $< $(LINK_OPTS) || echo $< did not assemble or link
+%.out : %.mat
+	@- ($(CMD) -d -o $(basename $@) $< 2>&1 >/dev/null) || echo $< did not compile or link
 	@- if ! (./$@ | diff --brief - $(basename $@).cmp 2>&1 > /dev/null) ; then echo $(basename $@).mat output not as expected ; fi
 
 progs: $(PROGS)
 
 clean:
-	rm -f *.grammar *.tok *.parse *.ast *.s *.out
+	rm -f *.grammar *.tok *.parse *.ast *.s *.out *.o
 
 .PHONY: all clean progs
 

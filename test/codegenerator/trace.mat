@@ -1,0 +1,32 @@
+// calculate the sum of the elements on the main diagonal
+// the trace is only defined for square nxn matrices
+
+fun double trace(mat m):
+    mat s = shape(m)
+
+    double l = length(s)
+
+    if l != 2:
+        error(f"trace: input not a 2D matrix ({l:f} dimensions)")
+    if s[0] != s[1]:
+        error(f"trace: input not a square matrix {s:m}")
+
+    mat i
+    double sum
+
+    for i in range(0,s[0],1):
+        sum += m[i][i]
+
+    return sum
+
+mat test =[[1,2,3],
+           [2,3,4],
+           [3,4,5]]
+
+double t = trace(test)
+
+printdouble(t)
+
+assert t == 9, f"trace of matrix:\n\n{test:m}\nwas {t:.4f}, expected 9"
+
+
