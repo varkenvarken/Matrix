@@ -1,3 +1,3 @@
 ## Welcome to the webpages for Matrix
 
-[Syntax](https://github.com/varkenvarken/Matrix/edit/gh-pages/Syntax.md)
+The supported [Syntax](https://github.com/varkenvarken/Matrix/Syntax.md) is documented (sort of).
