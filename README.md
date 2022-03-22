@@ -16,7 +16,7 @@ An example of the kind of syntax is accepts:
 
 ```
 // calculate the sum of the elements on the main diagonal
-// the trace is only define for square nxn matrices
+// the trace is only defined for square nxn matrices
 
 fun double trace(mat m):
     mat s = shape(m)
