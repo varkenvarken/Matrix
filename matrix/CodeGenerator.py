@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220321171027
+# Version: 20220322110813
 
 import re
 
@@ -287,8 +287,8 @@ class CodeGenerator:
             # self.locals.append(code)
             # return "str"
 
-            for name, symbol in self.symbols.symbols.items():
-                print(">>>>>", name, symbol.offset)
+            # for name, symbol in self.symbols.symbols.items():
+            #    print(">>>>>", name, symbol.offset)
             string = node.info["string"]
             symbols = node.info["symbols"]
             code = CodeChunk(intro="a (possibly interpolated) string literal")
@@ -309,7 +309,6 @@ class CodeGenerator:
                                     f"interpolation of {item}, type does not match declared type {dtype}"
                                 )
                             else:
-                                print(">>>>", name, self.symbols[name].offset)
                                 if scope == "global":
                                     code += load_quad(
                                         reg=f"{name}(%rip)",
@@ -861,7 +860,6 @@ class CodeGenerator:
                                 self.stack += 8
                                 n += 1
                         elif typ == "f":
-                            print(">>>>", item, name, typ, scope, dtype)
                             if dtype != "double":
                                 print(
                                     f"interpolation of {item}, type does not match declared type {dtype}"
