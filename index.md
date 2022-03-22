@@ -1,6 +1,6 @@
 ## Welcome to the webpages for Matrix
 
-The supported [Syntax](https://github.com/varkenvarken/Matrix/Syntax) is documented (sort of).
+The supported [Syntax](https://varkenvarken.github.io/Matrix/Syntax) is documented (sort of).
 
 # scopes and declarations
 
