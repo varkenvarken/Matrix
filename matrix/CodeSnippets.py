@@ -1,7 +1,7 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220320121136
+# Version: 20220321162910
 
 from argparse import ArgumentError
 from collections import defaultdict
@@ -258,6 +258,45 @@ def notequal_double():
     return pop0 + pop1 + binop + push
 
 
+# https://www.felixcloutier.com/x86/ucomisd
+def equal_double():
+    pop0 = pop_quad(intro="check if double arguments are equal", reg="%xmm1")
+    pop1 = pop_quad(reg="%xmm0")
+    label = labels[".cmp_nan"]
+    endlabel = labels[".cmp_end"]
+    binop = CodeChunk(
+        lines=[
+            CodeLine(
+                opcode="ucomisd",
+                operands=f"%xmm1, %xmm0",
+                comment="unordered compare two doubles",
+            ),
+            CodeLine(
+                opcode="jp",
+                operands=label,
+                comment="jump if unordered (one of them is a NaN)",
+            ),
+            CodeLine(opcode="jne", operands=label, comment="jump if not equal"),
+            CodeLine(
+                opcode="movq",
+                operands="$0x3FF0000000000000, %rax",
+                comment="set xmm0 to 1.0",
+            ),
+            CodeLine(opcode="movq", operands="%rax, %xmm0", comment="set xmm0 to 1.0"),
+            CodeLine(opcode="jmp", operands=endlabel),
+            CodeLine(
+                label=label,
+                opcode="pxor",
+                operands=f"%xmm0, %xmm0",
+                comment="zero out xmm0",
+            ),
+            CodeLine(label=endlabel),
+        ],
+    )
+    push = push_quad(reg="%xmm0")
+    return pop0 + pop1 + binop + push
+
+
 def binop_str(binop, intro=None, linecomment=None):
     pop0 = pop_quad(reg="%rsi", intro=intro)
     pop1 = pop_quad(reg="%rdi")
@@ -280,6 +319,7 @@ def binop_mat(binop, intro=None, linecomment=None):
     )
     push = push_quad(reg="%rax")
     return pop0 + pop1 + binop + push
+
 
 def binop_mat_scalar(binop, intro=None, linecomment=None):
     pop0 = pop_quad(reg="%rsi", intro=intro)
@@ -566,7 +606,7 @@ def vardef(v):
                     operands=f". + 8",
                     comment="string variables and constants are pointers",
                 ),
-                CodeLine(opcode=".string", operands=f"{v.value}"),
+                CodeLine(opcode=".string", operands=f"{v.value['string']}"),
                 CodeLine(opcode=".size", operands=f"{v.name}, .-{v.name}"),
             ]
         )
@@ -842,11 +882,22 @@ def stack_adjust(size):
 
 def jump_if_false(label):
     return CodeChunk(
-        intro="jump if false (i.e. anything non-zero)",
+        intro="jump if false (zero)",
         lines=[
             CodeLine(opcode="popq", operands="%rax"),
             CodeLine(opcode="cmp", operands="$0, %rax"),
             CodeLine(opcode="jz", operands=label),
+        ],
+    )
+
+
+def jump_if_true(label):
+    return CodeChunk(
+        intro="jump if true (i.e. anything non-zero)",
+        lines=[
+            CodeLine(opcode="popq", operands="%rax"),
+            CodeLine(opcode="or", operands="%rax, %rax"),
+            CodeLine(opcode="jnz", operands=label),
         ],
     )
 
@@ -937,6 +988,30 @@ def pushZero():
     )
 
 
+def pushLong(number):
+    return CodeChunk(
+        lines=[
+            CodeLine(
+                opcode="pushq",
+                operands=f"${number}",
+                comment="push a long",
+            )
+        ]
+    )
+
+
+def pushLong(number):
+    return CodeChunk(
+        lines=[
+            CodeLine(
+                opcode="pushq",
+                operands=f"${number}",
+                comment="push a long",
+            )
+        ]
+    )
+
+
 # top is index (a long), top -1 is matrix
 def getItemAndInc(alignment):
     convert = CodeChunk(
@@ -985,4 +1060,29 @@ def pop(n):
     return CodeChunk(
         intro=f"pop {n} items from the stack",
         lines=[CodeLine(opcode="addq", operands=f"${n*8}, %rsp")],
+    )
+
+
+def concat_strings(alignment, n):
+    return CodeChunk(
+        intro=f"concatenate {n} strings",
+        lines=[
+            CodeLine(
+                opcode="movq",
+                operands="%rsp, %rdi",
+                comment="pointer to list of strings in reverse order",
+            ),
+            CodeLine(
+                opcode="movq", operands=f"${n}, %rsi", comment="number of strings"
+            ),
+            CodeLine(opcode="call", operands="concat_strings"),
+            CodeLine(
+                opcode="addq", operands=f"${(n-1)*8}, %rsp", comment=f"pop {n-1} items"
+            ),
+            CodeLine(
+                opcode="movq",
+                operands="%rax, (%rsp)",
+                comment="and replace top item by concatenated result",
+            ),
+        ],
     )

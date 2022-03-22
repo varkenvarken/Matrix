@@ -1,10 +1,9 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220320120039
+# Version: 20220321162208
 
-from ast import While
-from math import expm1
+from copy import copy, deepcopy
 
 from .Node import SyntaxNode
 
@@ -65,6 +64,10 @@ class Scope:
         )
         return a + b
 
+    def __copy__(self):
+        scope_copy = Scope(outer=copy(self.outer), scope=self.scope)
+        scope_copy.symbols = deepcopy(self.symbols)
+        return scope_copy
 
 def inner(node):
     assert node.token == "elist"
@@ -188,7 +191,7 @@ class SyntaxTree:
                 if vardecl.e0 is None:
                     dnode.e1 = (
                         SyntaxNode(
-                            "stringliteral", '""', level=node.level + 1, **node.src()
+                            "stringliteral", {"string": '""', "symbols":copy(self.symbols)}, level=node.level + 1, **node.src()
                         )
                         if typ == "str"
                         else SyntaxNode(
@@ -208,9 +211,13 @@ class SyntaxTree:
                     )
                     dnode = dnode.e1
             return dnodes
-        elif node.token in ("number", "stringliteral"):
+        elif node.token == "number":
             return SyntaxNode(
                 node.token, node.value, level=node.level + 1, **node.src()
+            )
+        elif node.token == "stringliteral":
+            return SyntaxNode(
+                node.token, {"string": node.value, "symbols":copy(self.symbols)}, level=node.level + 1, **node.src()
             )
         elif node.token in ("matrixliteral"):
             item = node.e0
@@ -485,7 +492,7 @@ class SyntaxTree:
         elif node.token == "assert":
             return SyntaxNode(
                 "assert",
-                node.value,
+                {"string": node.value, "symbols":copy(self.symbols)},
                 level=node.level + 1,
                 **node.src(),
                 e0=self.process(node.e0),

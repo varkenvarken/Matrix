@@ -14,7 +14,7 @@ x propagate line numbers, filenames and actual lines trough parsenode, ast to co
 BUGS
 ====
 
-- a completely empty line should not generate dedents
+x a completely empty line should not generate dedents
 
 
 IDEAS

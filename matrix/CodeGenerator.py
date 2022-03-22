@@ -1,10 +1,9 @@
 # Matrix, a simple programming language
 # (c) 2022 Michel Anders
 # License: MIT, see License.md
-# Version: 20220320121145
+# Version: 20220321171027
 
-from cmath import exp
-from sys import stderr
+import re
 
 from .CodeSnippets import *
 from .Syntax import Scope
@@ -222,6 +221,8 @@ class CodeGenerator:
                     self.code.append(modulo_double())
                 elif node.info["op"] == "notequal":
                     self.code.append(notequal_double())
+                elif node.info["op"] == "equal":
+                    self.code.append(equal_double())
                 else:
                     print("unprocessed binop for two doubles", node.info["op"])
                 self.stack -= 8
@@ -280,11 +281,93 @@ class CodeGenerator:
             self.locals.append(code)
             return "double"
         elif node.typ == "stringliteral":
-            label, code = local_string(node.info)
-            self.code.append(load_address(reg=f"{label}(%rip)"))
-            self.stack += 8
-            self.locals.append(code)
+            # label, code = local_string(node.info["string"])
+            # self.code.append(load_address(reg=f"{label}(%rip)"))
+            # self.stack += 8
+            # self.locals.append(code)
+            # return "str"
+
+            for name, symbol in self.symbols.symbols.items():
+                print(">>>>>", name, symbol.offset)
+            string = node.info["string"]
+            symbols = node.info["symbols"]
+            code = CodeChunk(intro="a (possibly interpolated) string literal")
+            if string.startswith("f"):
+                items = self.interpolateString(
+                    string[2:-1]
+                )  # strip leading f" and trailing "
+                n = 0
+                for item in items:
+                    if item.startswith("{"):
+                        name, typ = item[1:-1].split(":")
+                        scope = symbols[name].scope
+                        dtype = symbols[name].type
+                        typ = typ[-1]  # we  ignore any width and precision
+                        if typ == "m":
+                            if dtype != "mat":
+                                print(
+                                    f"interpolation of {item}, type does not match declared type {dtype}"
+                                )
+                            else:
+                                print(">>>>", name, self.symbols[name].offset)
+                                if scope == "global":
+                                    code += load_quad(
+                                        reg=f"{name}(%rip)",
+                                        linecomment=f"global var reference {dtype}:{name}",
+                                    )
+                                else:
+
+                                    code += load_quad(
+                                        reg=f"-{self.symbols[name].offset}(%rbp)",
+                                        linecomment=f"local var reference {dtype}:{name}",
+                                    )
+                                code += pop_quad(reg="%rdi")
+                                code += function_call(
+                                    "cvt_descriptor", "str", 1, self.align_stack()
+                                )
+                                self.stack += 8
+                                n += 1
+                        elif typ == "f":
+                            if dtype != "double":
+                                print(
+                                    f"interpolation of {item}, type does not match declared type {dtype}"
+                                )
+                            else:
+                                if scope == "global":
+                                    code += load_quad(
+                                        reg=f"{name}(%rip)",
+                                        linecomment=f"global var reference {dtype}:{name}",
+                                    )
+                                else:
+                                    code += load_quad(
+                                        reg=f"-{self.symbols[name].offset}(%rbp)",
+                                        linecomment=f"local var reference {dtype}:{name}",
+                                    )
+                                code += pop_quad(reg="%xmm0")
+                                code += function_call(
+                                    "cvt_double", "str", 1, self.align_stack()
+                                )
+                                self.stack += 8
+                                n += 1
+                        else:
+                            print(f"interpolation of {item}, type not supported")
+                    else:
+                        slabel, scode = local_string(f'"{item}"')
+                        code += load_address(reg=f"{slabel}(%rip)")
+                        self.stack += 8
+                        self.locals.append(scode)
+                        n += 1
+                if n > 0:
+                    code += concat_strings(self.align_stack(), n)
+                    self.stack -= (n - 1) * 8
+            else:
+                slabel, scode = local_string(string)
+                code += load_address(reg=f"{slabel}(%rip)")
+                self.stack += 8
+                self.locals.append(scode)
+            self.code.append(code)
             return "str"
+
         elif node.typ == "matrixliteral":
             label, code = local_matrix(node.info)
             self.code.append(
@@ -303,13 +386,11 @@ class CodeGenerator:
                 assert arg.typ == "argument"
                 argtypes = []
                 expected_types = self.symbols[name].parameters[:]
-                print(name, returntype, expected_types)
                 while arg:
                     self.code.append(f"# calculate argument {an}")
                     # the type should match the type of the argument
                     type0 = expected_types.pop(0)
                     type1 = self.process(arg.e1)
-                    print(type0, type1, argtypes)
                     if type0 != type1 or type0 is None or type1 is None:
                         if type0 == "mat" and type1 == "double":
                             self.code.append(scalar_to_mat(self.align_stack()))
@@ -323,7 +404,6 @@ class CodeGenerator:
                     argtypes.append(type0)
                     arg = arg.e0  # next one
                     an += 1
-                print(argtypes)
                 ndoubles = 0
                 nothers = 0
                 argregisters = []
@@ -467,7 +547,7 @@ class CodeGenerator:
             self.code.append(pop_quad(reg=f"{'%xmm0' if rtype=='double' else '%rax'}"))
             self.stack -= 8
             self.code.append(f"        jmp end_{self.function}")
-        elif node.typ in ("assign"):
+        elif node.typ == "assign":
             symbol = self.symbols[node.info["name"]]
             # Note that assignment is an expression so we do not pop the stack
             if (
@@ -557,8 +637,6 @@ class CodeGenerator:
                         )
                     return type1
                 else:  # aplus, aminus ...
-                    print("APLUS")
-
                     # WARNING: massive chunk of code duplicated from binop
                     # except for comparisons and we do NOT adjust the stack
                     if type0 != type1 or type0 is None or type1 is None:
@@ -729,8 +807,114 @@ class CodeGenerator:
             self.code.append(labelCode(end_label))
             self.code.append(pop(2))
             # self.stack -=8  no correction we didn count the 2 arguments (and they are 16 bytes together)
+        elif node.typ == "assert":
+            string = node.info["string"]
+            symbols = node.info["symbols"]
+            code = CodeChunk(intro="assertion")
+            # the expression to test
+            typ = self.process(node.e0)
+
+            # skip the assert exception if true
+            label = labels["assert"]
+            if typ == "mat":
+                convert = mat_to_double(self.align_stack())
+                code += convert
+            elif typ == "str":
+                print("assert expression cannot be a string")
+            code += jump_if_true(label)
+            self.stack -= 8
+
+            code += pushLong(1)  # exit
+            code += pushLong(22)  # errno EINVAL
+            self.stack += 16
+            if string.startswith("f"):
+                items = self.interpolateString(
+                    "assertion failed: " + string[2:-1]
+                )  # strip leading f" and trailing "
+                n = 0
+                for item in items:
+                    if item.startswith("{"):
+                        name, typ = item[1:-1].split(":")
+                        scope = symbols[name].scope
+                        dtype = symbols[name].type
+                        typ = typ[-1]  # we  ignore any width and precision
+                        if typ == "m":
+                            if dtype != "mat":
+                                print(
+                                    f"interpolation of {item}, type does not match declared type {dtype}"
+                                )
+                            else:
+                                if scope == "global":
+                                    code += load_quad(
+                                        reg=f"{name}(%rip)",
+                                        linecomment=f"global var reference {dtype}:{name}",
+                                    )
+                                else:
+                                    code += load_quad(
+                                        reg=f"-{symbols[name].offset}(%rbp)",
+                                        linecomment=f"local var reference {dtype}:{name}",
+                                    )
+                                code += pop_quad(reg="%rdi")
+                                code += function_call(
+                                    "cvt_descriptor", "str", 1, self.align_stack()
+                                )
+                                self.stack += 8
+                                n += 1
+                        elif typ == "f":
+                            print(">>>>", item, name, typ, scope, dtype)
+                            if dtype != "double":
+                                print(
+                                    f"interpolation of {item}, type does not match declared type {dtype}"
+                                )
+                            else:
+                                if scope == "global":
+                                    code += load_quad(
+                                        reg=f"{name}(%rip)",
+                                        linecomment=f"global var reference {dtype}:{name}",
+                                    )
+                                else:
+                                    code += load_quad(
+                                        reg=f"-{symbols[name].offset}(%rbp)",
+                                        linecomment=f"local var reference {dtype}:{name}",
+                                    )
+                                code += pop_quad(reg="%xmm0")
+                                code += function_call(
+                                    "cvt_double", "str", 1, self.align_stack()
+                                )
+                                self.stack += 8
+                                n += 1
+                        else:
+                            print(f"interpolation of {item}, type not supported")
+                    else:
+                        slabel, scode = local_string(f'"{item}"')
+                        code += load_address(reg=f"{slabel}(%rip)")
+                        self.stack += 8
+                        self.locals.append(scode)
+                        n += 1
+                if n > 0:
+                    code += concat_strings(self.align_stack(), n)
+                    self.stack -= (n - 1) * 8
+            else:
+                slabel, scode = local_string("assertion failed: " + string)
+                code += load_address(reg=f"{slabel}(%rip)")
+                self.stack += 8
+                self.locals.append(scode)
+            code += pop_quad(reg="%rdx")
+            code += pop_quad(reg="%rsi")
+            code += pop_quad(reg="%rdi")
+            self.stack -= 24
+            code += function_call(
+                "__real_error", "void", 3, self.align_stack()
+            )  # we do not return from this function
+            code.lines.append(CodeLine(label=label))
+            self.code.append(code)
         else:
             print("unprocessed syntax node", node)
+
+    def interpolateString(self, string):
+        varref = re.compile(r"(\{[^}]+\})")
+        items = re.split(varref, string)
+        return items
 
     def processScope(self):
         """calculate offsets if automatic (local) variables
